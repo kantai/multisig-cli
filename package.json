@@ -1,10 +1,9 @@
 {
   "dependencies": {
-    "@ledgerhq/hw-transport-node-hid": "^5.41.0",
-    "@ledgerhq/hw-transport-node-speculos": "^5.41.0",
-    "@stacks/transactions": "^1.1.1-alpha.0",
+    "@ledgerhq/hw-transport-node-hid": "^6.27.1",
+    "@ledgerhq/hw-transport-node-speculos": "^6.27.1",
+    "@stacks/transactions": "^4.3.3",
     "@zondax/ledger-blockstack": "^0.22.5",
-    "@zondax/zemu": "^0.11.0",
     "bip39": "^3.0.3",
     "bitcoinjs-lib": "^5.2.0",
     "bn.js": "^4.11.9",

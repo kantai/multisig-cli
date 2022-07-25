@@ -1,16 +1,19 @@
-const SpecTransport = require("@ledgerhq/hw-transport-node-speculos").default;
-const TransportNodeHid = require("@ledgerhq/hw-transport-node-hid").default;
-const StxApp = require("@zondax/ledger-blockstack").default;
-const LedgerError = require("@zondax/ledger-blockstack").LedgerError;
-const btc = require('bitcoinjs-lib');
-const C32 = require('c32check');
-const BigNum = require('bn.js');
 
-const Zemu = require('@zondax/zemu');
-const readline = require('readline');
+import SpecTransport from "@ledgerhq/hw-transport-node-speculos";
+import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
+
+import StxApp from "@zondax/ledger-blockstack";
+import { LedgerError } from "@zondax/ledger-blockstack";
+
+import * as btc from "bitcoinjs-lib";
+import * as C32 from "c32check";
+import { AddressVersion, TransactionAuthField, UnsignedMultiSigTokenTransferOptions } from "@stacks/transactions";
+import readline from "readline";
+
+import BigNum from "bn.js";
 const util = require('util');
 
-const StxTx = require("@stacks/transactions");
+import * as StxTx from "@stacks/transactions";
 
 // This will generate pubkeys using
 //  the format: m/44'/5757'/0'/0/x
@@ -20,15 +23,29 @@ const XPUB_PATH = `m/44'/5757'/0'`;
 //  the format: m/5757'/0'/0/0/x
 const BTC_MULTISIG_SCRIPT_PATH = `m/5757'/0'/0`;
 
+interface MultisigData {
+  tx: {
+    fee: string,
+    amount: string,
+    numSignatures: number,
+    recipient: string,
+    memo?: string,
+  },
+  spendingFields: {
+    publicKey: string,
+    signatureVRS?: string,
+  }[],
+  sigHashes: string[],
+}
 
-async function getPubKey(app, index) {
+async function getPubKey(app: StxApp, index: number): Promise<string> {
   let amt = (await app.getAddressAndPubKey(`${XPUB_PATH}/0/${index}`, StxTx.AddressVersion.TestnetSingleSig));
   console.log(amt);
   return amt.publicKey.toString('hex')
 }
 
 /// Builds spending condition fields out of a multisig data serialization
-function makeSpendingConditionFields(multisigData) {
+function makeSpendingConditionFields(multisigData: MultisigData): TransactionAuthField[] {
   let fields = multisigData.spendingFields
       .map((field) => {
         if (field.signatureVRS) {
@@ -40,49 +57,60 @@ function makeSpendingConditionFields(multisigData) {
         }
       })
       .map((x) => {
-        return StxTx.createTransactionAuthField(x);
+        return StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, x);
       })
   return fields
 }
 
-function encodeMultisigData(multisigData) {
+function encodeMultisigData(multisigData: MultisigData) {
   return Buffer.from(JSON.stringify(multisigData)).toString('base64');
 }
 
-function decodeMultisigData(serialized) {
-  return JSON.parse(Buffer.from(serialized, 'base64'));
+function decodeMultisigData(serialized: string): MultisigData {
+  return JSON.parse(Buffer.from(serialized, 'base64').toString());
 }
 
-async function finalizeMultisigTransaction(multisigData) {
+function setMultisigTransactionSpendingConditionFields(tx: StxTx.StacksTransaction, fields: TransactionAuthField[]) {
+  if (!tx.auth.spendingCondition) {
+    throw new Error(`Multisig transaction cannot be finalized: did not have enough information in multisig data to initialize spending condition`);
+  }
+  if (StxTx.isSingleSig(tx.auth.spendingCondition)) {
+    throw new Error(`Multisig transaction cannot be finalized: supplied information initialized a singlesig transaction`);
+  }
+  tx.auth.spendingCondition.fields = fields;
+}
+
+async function finalizeMultisigTransaction(multisigData: MultisigData): Promise<string> {
   if (multisigData.tx.numSignatures != multisigData.sigHashes.length) {
     throw new Error(`Multisig transaction cannot be finalized, expected ${multisigData.tx.numSignatures} signatures, but only found  ${multisigData.sigHashes.length}`);
   }
 
   let unsignedTx = await makeStxTokenTransferFrom(multisigData);
-  unsignedTx.auth.spendingCondition.fields = makeSpendingConditionFields(multisigData);
+  setMultisigTransactionSpendingConditionFields(unsignedTx, makeSpendingConditionFields(multisigData));
 
   return unsignedTx.serialize().toString('hex');
 }
 
-function updateMultisigData(multisigData, sigHash, signatureVRS, index) {
+function updateMultisigData(multisigData: MultisigData, sigHash: string, signatureVRS: string, index: number) {
   multisigData.sigHashes.push(sigHash);
   multisigData.spendingFields[index].signatureVRS = signatureVRS;
 }
 
 /// Builds an unsigned transfer out of a multisig data serialization
-async function makeStxTokenTransferFrom(multisigData) {
+async function makeStxTokenTransferFrom(multisigData: MultisigData) {
   let fee = new BigNum(multisigData.tx.fee, 10);
   let amount = new BigNum(multisigData.tx.amount, 10);
   let numSignatures = multisigData.tx.numSignatures;
   let publicKeys = multisigData.spendingFields.slice().map(field => field.publicKey);
   let memo = multisigData.tx.memo;
   let recipient = multisigData.tx.recipient;
+  let anchorMode = StxTx.AnchorMode.Any;
 
-  return (await makeUnsignedTransfer({ fee, amount, numSignatures, publicKeys, recipient, memo })).unsignedTx;
+  return (await makeUnsignedTransfer({ anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo })).unsignedTx;
 }
 
 // Produce the signing buffer for a ledger device from the multisig data serialization
-async function getLedgerSigningBuffer(multisigData) {
+async function getLedgerSigningBuffer(multisigData: MultisigData): Promise<Buffer> {
   let unsignedTxBuff = (await makeStxTokenTransferFrom(multisigData)).serialize();
 
   if (multisigData.sigHashes.length == 0) {
@@ -90,19 +118,20 @@ async function getLedgerSigningBuffer(multisigData) {
   } else if (multisigData.sigHashes.length == 1) {
     const postSigHashBuffer = Buffer.from(multisigData.sigHashes[0], 'hex');
     const pkEnc = Buffer.alloc(1, StxTx.PubKeyEncoding.Compressed);
-    const prevSignature = Buffer.from(
-      multisigData
+    const prevSignatureFound = multisigData
         .spendingFields
-        .find((field) => field.signatureVRS)
-        .signatureVRS,
-      'hex');
+        .find((field) => field.signatureVRS);
+    if (!prevSignatureFound || !prevSignatureFound.signatureVRS) {
+      throw new Error(`Error in supplied multisig data. Sighash included, but no corresponding VRS encoded in the spending fields.`);
+    }
+    const prevSignature = Buffer.from(prevSignatureFound.signatureVRS, 'hex');
     return Buffer.concat([unsignedTxBuff, postSigHashBuffer, pkEnc, prevSignature]);
   } else {
     throw new Error(`Ledger Stacks app does not support validating more than 2 signatures in multisig transactions`);
   }
 }
 
-async function ledgerSignMultisigTx(app, path, multisigData) {
+async function ledgerSignMultisigTx(app: StxApp, path: string, multisigData: MultisigData) {
   const pubkey = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig))
         .publicKey.toString('hex');
   const pubkeys = multisigData.spendingFields
@@ -133,7 +162,7 @@ async function ledgerSignMultisigTx(app, path, multisigData) {
   return { sigHash, signatureVRS, index }
 }
 
-async function ledgerSignTx(app, path, partialFields, unsignedTx, prevSigHash) {
+async function ledgerSignTx(app: StxApp, path: string, partialFields: TransactionAuthField[], unsignedTx: Buffer, prevSigHash?: string) {
   const pubkey = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig))
         .publicKey.toString('hex');
 
@@ -141,9 +170,7 @@ async function ledgerSignTx(app, path, partialFields, unsignedTx, prevSigHash) {
   const pubkeys = partialFields
         .map((x) => {
           console.log(x);
-          if (! x.contents && x.pubKeyEncoding) {
-            return x.pubKeyEncoding.data.toString('hex')
-          } else if (x.contents.type == StxTx.StacksMessageType.PublicKey) {
+          if (x.contents.type === StxTx.StacksMessageType.PublicKey) {
             return x.contents.data.toString('hex')
           } else {
             return null
@@ -161,7 +188,11 @@ async function ledgerSignTx(app, path, partialFields, unsignedTx, prevSigHash) {
     let txBuffer = unsignedTx.slice();
     let postSigHashBuffer = Buffer.from(prevSigHash, 'hex');
     let pkEnc = Buffer.alloc(1, StxTx.PubKeyEncoding.Compressed);
-    let prev_signer = Buffer.from(partialFields[index - 1].contents.data, 'hex');
+    let prev_signer_field = partialFields[index - 1];
+    if (prev_signer_field.contents.type !== StxTx.StacksMessageType.MessageSignature) {
+      throw new Error(`Previous sighash was supplied, but previous signer was not included in the transaction's auth fields`);
+    }
+    let prev_signer = Buffer.from(prev_signer_field.contents.data, 'hex');
     let msg_array = [txBuffer, postSigHashBuffer, pkEnc, prev_signer];
     resp = await app.sign(path, Buffer.concat(msg_array));
   } else {
@@ -209,6 +240,7 @@ async function generateMultiSignedTx() {
     publicKeys: pubkeys,
     amount: new BigNum(1000),
     recipient: "SP000000000000000000002Q6VF78",
+    anchorMode: StxTx.AnchorMode.Any,
   });
 
   let signer = new StxTx.TransactionSigner(transaction);
@@ -221,8 +253,8 @@ async function generateMultiSignedTx() {
 }
 
 
-async function generateMultiUnsignedTx(app) {
-  pubkeys = [
+async function generateMultiUnsignedTx(app: StxApp) {
+  const pubkeys = [
     '03827ffa27ad5af481203d4cf5654cd20312398fa92084ff76e4b4dffddafe1059',
     '03a9d11f6d4102ed323740f95668d6f206c5b5cbc5ce5c7028ceba1736fbbd6861',
     '0205132dbd1270f66adaf43723940a98be6331abe95bfa53838815bf214a5a2150'
@@ -237,6 +269,7 @@ async function generateMultiUnsignedTx(app) {
     publicKeys: pubkeys,
     amount: new BigNum(1000),
     recipient: "SP000000000000000000002Q6VF78",
+    anchorMode: StxTx.AnchorMode.Any,
   });
 
   let partialFields =
@@ -247,25 +280,31 @@ async function generateMultiUnsignedTx(app) {
   return { unsignedTx, pubkeys: partialFields }
 }
 
-function makeMultiSigAddr(pubkeys, required) {
+function makeMultiSigAddr(pubkeys: string[], required: number) {
   let authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
   let redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
   let btcAddr = btc.payments.p2sh({ redeem }).address;
+  if (!btcAddr) {
+    throw Error(`Failed to construct BTC address from pubkeys`);
+  }
   let c32Addr = C32.b58ToC32(btcAddr);
   return c32Addr
 }
 
-async function makeUnsignedTransfer(options) {
+async function makeUnsignedTransfer(options: UnsignedMultiSigTokenTransferOptions) {
   const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer( options );
   const publicKeys = options.publicKeys.slice();
   return { unsignedTx, publicKeys }
 }
 
-function checkAddressPubKeyMatch(pubkeys, required, address) {
+function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: string) {
   // first try in sorted order
   let authorizedPKs = pubkeys.slice().sort().map((k) => Buffer.from(k, 'hex'));
   let redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
   let btcAddr = btc.payments.p2sh({ redeem }).address;
+  if (!btcAddr) {
+    throw Error(`Failed to construct BTC address from pubkeys`);
+  }
   let c32Addr1 = C32.b58ToC32(btcAddr);
   if (c32Addr1 == address) {
     return authorizedPKs.map((k) => k.toString('hex'))
@@ -275,6 +314,9 @@ function checkAddressPubKeyMatch(pubkeys, required, address) {
   authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
   redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
   btcAddr = btc.payments.p2sh({ redeem }).address;
+  if (!btcAddr) {
+    throw Error(`Failed to construct BTC address from pubkeys`);
+  }
   let c32Addr2 = C32.b58ToC32(btcAddr);
   if (c32Addr2 == address) {
     return authorizedPKs.map((k) => k.toString('hex'))
@@ -283,7 +325,7 @@ function checkAddressPubKeyMatch(pubkeys, required, address) {
   throw `Public keys did not match expected address. Expected ${address}, but pubkeys correspond to ${c32Addr1} or ${c32Addr2}`
 }
 
-async function generateMultiSigAddr(app) {
+async function generateMultiSigAddr(app: StxApp) {
   let pk0 = await getPubKey(app, 0);
   let pk1 = await getPubKey(app, 1);
   let pk2 = await getPubKey(app, 2);
@@ -291,15 +333,15 @@ async function generateMultiSigAddr(app) {
   return makeMultiSigAddr([pk0, pk1, pk2], 2);
 }
 
-async function readInput(query) {
+async function readInput(query: string): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  const question = util.promisify(rl.question).bind(rl);
+//  const question = util.promisify(rl.question).bind(rl);
 
-  const answer = await new Promise(resolve => {
+  const answer: string = await new Promise(resolve => {
     rl.question(`${query}? `, answer => resolve(answer))
   });
 
@@ -308,7 +350,7 @@ async function readInput(query) {
   return answer;
 }
 
-async function main(args) {
+async function main(args: string[]) {
   if (args[0] == "create_transfer") {
     let fromAddress = (await readInput("From Address (C32)")).trim();
     let publicKeys = (await readInput("From public keys (comma separate)"))
@@ -355,13 +397,13 @@ async function main(args) {
     let out1 = result.outFields;
     let post_sighash = result.next_sighash;
 
-    unsignedTx.auth.spendingCondition.fields = out1;
+    setMultisigTransactionSpendingConditionFields(unsignedTx, out1);
 
     result = await ledgerSignTx(app, `${XPUB_PATH}/0/1`, out1, fullyUnsignedTx, post_sighash);
     let out2 = result.outFields;
     post_sighash = result.next_sighash;
 
-    unsignedTx.auth.spendingCondition.fields = out2;
+    setMultisigTransactionSpendingConditionFields(unsignedTx, out2);
 
     console.log(`Finished tx: ${unsignedTx.serialize().toString('hex')}`);
   } else if (args[0] == "make_sign_multi_3") {
@@ -380,9 +422,9 @@ async function main(args) {
     ];
 
     let spendingFields = pubkeys.map((x) => { return { publicKey: x } });
-    let sigHashes = [];
+    let sigHashes: string[] = [];
 
-    let multisigData = { tx, spendingFields, sigHashes };
+    let multisigData: MultisigData = { tx, spendingFields, sigHashes };
 
     let encoded = encodeMultisigData(multisigData);
     console.log(`Unsigned payload: ${encoded}`);
