@@ -1,7 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 export * from './lib';
 
-import { MultisigData, updateMultisigData, decodeMultisigData, encodeMultisigData, makeMultiSigAddr, ledgerSignMultisigTx } from './lib';
+import { MultisigData, updateMultisigData, decodeMultisigData, encodeMultisigData, makeMultiSigAddr, ledgerSignMultisigTx, finalizeMultisigTransaction } from './lib';
 import StxApp from "@zondax/ledger-blockstack";
 import LedgerTransportWeb from '@ledgerhq/hw-transport-webhid';
 import SpeculosTransportHttp from "@ledgerhq/hw-transport-node-speculos-http";
@@ -20,6 +20,24 @@ export function displayMessage(name: string, message: string, title: string) {
       const titleArea = document.getElementById(`${name}-title`)!;
       titleArea.innerHTML = title
     }
+}
+
+export async function sign_final() {
+    try {
+        const transport = await LedgerTransportWeb.create();
+        const app = new StxApp(transport);
+        const inputPayload = getInputElement('transact-input');
+        const hdPath = getInputElement('transact-path');
+
+        const multisigData = decodeMultisigData(inputPayload);
+        const { sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, hdPath, multisigData);
+        updateMultisigData(multisigData, sigHash, signatureVRS, index);
+        let finished = await finalizeMultisigTransaction(multisigData);
+        displayMessage('tx', `Finalized tx: <br/> <br/> ${finished}`, 'Finalized tx')    
+    } catch(e: any) {
+        displayMessage('tx', e.toString(), "Error signing transaction");
+        throw e;
+    }  
 }
 
 export async function sign_partial() {

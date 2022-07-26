@@ -14,7 +14,7 @@ import BigNum from "bn.js";
 
 import * as StxTx from "@stacks/transactions";
 
-import { updateMultisigData, MultisigData, makeMultiSigAddr, decodeMultisigData, encodeMultisigData, ledgerSignMultisigTx } from "./lib";
+import { updateMultisigData, MultisigData, makeMultiSigAddr, decodeMultisigData, encodeMultisigData, ledgerSignMultisigTx, finalizeMultisigTransaction } from "./lib";
 
 // This will generate pubkeys using
 //  the format: m/44'/5757'/0'/0/x
@@ -30,24 +30,6 @@ async function getPubKey(app: StxApp, index: number): Promise<string> {
   return amt.publicKey.toString('hex')
 }
 
-/// Builds spending condition fields out of a multisig data serialization
-function makeSpendingConditionFields(multisigData: MultisigData): TransactionAuthField[] {
-  let fields = multisigData.spendingFields
-      .map((field) => {
-        if (field.signatureVRS) {
-          return StxTx.createMessageSignature(field.signatureVRS);
-        } else if (field.publicKey) {
-          return StxTx.createStacksPublicKey(field.publicKey);
-        } else {
-          throw "spendingField in the multisig object did not have publicKey specification"
-        }
-      })
-      .map((x) => {
-        return StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, x);
-      })
-  return fields
-}
-
 function setMultisigTransactionSpendingConditionFields(tx: StxTx.StacksTransaction, fields: TransactionAuthField[]) {
   if (!tx.auth.spendingCondition) {
     throw new Error(`Multisig transaction cannot be finalized: did not have enough information in multisig data to initialize spending condition`);
@@ -56,52 +38,6 @@ function setMultisigTransactionSpendingConditionFields(tx: StxTx.StacksTransacti
     throw new Error(`Multisig transaction cannot be finalized: supplied information initialized a singlesig transaction`);
   }
   tx.auth.spendingCondition.fields = fields;
-}
-
-async function finalizeMultisigTransaction(multisigData: MultisigData): Promise<string> {
-  if (multisigData.tx.numSignatures != multisigData.sigHashes.length) {
-    throw new Error(`Multisig transaction cannot be finalized, expected ${multisigData.tx.numSignatures} signatures, but only found  ${multisigData.sigHashes.length}`);
-  }
-
-  let unsignedTx = await makeStxTokenTransferFrom(multisigData);
-  setMultisigTransactionSpendingConditionFields(unsignedTx, makeSpendingConditionFields(multisigData));
-
-  return unsignedTx.serialize().toString('hex');
-}
-
-/// Builds an unsigned transfer out of a multisig data serialization
-async function makeStxTokenTransferFrom(multisigData: MultisigData) {
-  let fee = new BigNum(multisigData.tx.fee, 10);
-  let amount = new BigNum(multisigData.tx.amount, 10);
-  let numSignatures = multisigData.tx.numSignatures;
-  let publicKeys = multisigData.spendingFields.slice().map(field => field.publicKey);
-  let memo = multisigData.tx.memo;
-  let recipient = multisigData.tx.recipient;
-  let anchorMode = StxTx.AnchorMode.Any;
-
-  return (await makeUnsignedTransfer({ anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo })).unsignedTx;
-}
-
-// Produce the signing buffer for a ledger device from the multisig data serialization
-async function getLedgerSigningBuffer(multisigData: MultisigData): Promise<Buffer> {
-  let unsignedTxBuff = (await makeStxTokenTransferFrom(multisigData)).serialize();
-
-  if (multisigData.sigHashes.length == 0) {
-    return unsignedTxBuff;
-  } else if (multisigData.sigHashes.length == 1) {
-    const postSigHashBuffer = Buffer.from(multisigData.sigHashes[0], 'hex');
-    const pkEnc = Buffer.alloc(1, StxTx.PubKeyEncoding.Compressed);
-    const prevSignatureFound = multisigData
-        .spendingFields
-        .find((field) => field.signatureVRS);
-    if (!prevSignatureFound || !prevSignatureFound.signatureVRS) {
-      throw new Error(`Error in supplied multisig data. Sighash included, but no corresponding VRS encoded in the spending fields.`);
-    }
-    const prevSignature = Buffer.from(prevSignatureFound.signatureVRS, 'hex');
-    return Buffer.concat([unsignedTxBuff, postSigHashBuffer, pkEnc, prevSignature]);
-  } else {
-    throw new Error(`Ledger Stacks app does not support validating more than 2 signatures in multisig transactions`);
-  }
 }
 
 async function ledgerSignTx(app: StxApp, path: string, partialFields: TransactionAuthField[], unsignedTx: Buffer, prevSigHash?: string) {
@@ -220,12 +156,6 @@ async function generateMultiUnsignedTx(app: StxApp) {
     });
 
   return { unsignedTx, pubkeys: partialFields }
-}
-
-async function makeUnsignedTransfer(options: UnsignedMultiSigTokenTransferOptions) {
-  const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer( options );
-  const publicKeys = options.publicKeys.slice();
-  return { unsignedTx, publicKeys }
 }
 
 function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: string) {
