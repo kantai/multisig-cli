@@ -37,12 +37,22 @@ export interface MultisigData {
   sigHashes: string[],
 }
 
-export async function getPubKey(app: StxApp, index: number): Promise<string> {
-  let amt = (await app.getAddressAndPubKey(`${XPUB_PATH}/0/${index}`, StxTx.AddressVersion.TestnetSingleSig));
-  console.log(amt);
-  return amt.publicKey.toString('hex')
+export async function getPubKey(app: StxApp, path: string): Promise<string> {
+    let amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
+    console.log(amt);
+    return amt.publicKey.toString('hex')
+}  
+
+export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number): Promise<string> {
+  const path = `${XPUB_PATH}/0/${index}`;
+  return getPubKey(app, path);
 }
 
+export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number): Promise<string> {
+    const path = `${BTC_MULTISIG_SCRIPT_PATH}/0/${index}`;
+    return getPubKey(app, path);
+  }
+  
 /// Builds spending condition fields out of a multisig data serialization
 function makeSpendingConditionFields(multisigData: MultisigData): TransactionAuthField[] {
   let fields = multisigData.spendingFields
@@ -322,12 +332,4 @@ function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: s
   }
 
   throw `Public keys did not match expected address. Expected ${address}, but pubkeys correspond to ${c32Addr1} or ${c32Addr2}`
-}
-
-async function generateMultiSigAddr(app: StxApp) {
-  let pk0 = await getPubKey(app, 0);
-  let pk1 = await getPubKey(app, 1);
-  let pk2 = await getPubKey(app, 2);
-
-  return makeMultiSigAddr([pk0, pk1, pk2], 2);
 }

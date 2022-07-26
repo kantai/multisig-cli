@@ -22,7 +22,7 @@ export function displayMessage(name: string, message: string, title: string) {
     }
 }
 
-export async function sign_final() {
+export async function sign_and_complete() {
     try {
         const transport = await LedgerTransportWeb.create();
         const app = new StxApp(transport);
@@ -64,7 +64,7 @@ export function generate_transfer() {
     const requiredSigners = parseInt(getInputElement('from-n'));
     const toAddress = getInputElement('to-address');
     const toSend = getInputElement('stacks-send');
-
+    const fee = getInputElement('stacks-fee');
     const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
 
     const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, requiredSigners);
@@ -77,7 +77,7 @@ export function generate_transfer() {
 
     let multisigData: MultisigData = {
         tx: {
-            fee: "300",
+            fee,
             amount: toSend,
             numSignatures: requiredSigners,
             recipient: toAddress,
