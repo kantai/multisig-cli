@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+</head>
+<body>
+<style>
+.panel-body  {
+    word-break:break-all
+}
+</style>
+
+<div class="container">
+<h2>Stacks Address Transaction Signing Tool</h2>
+</div>
+
+<div class="container">
+<div class="panel panel-default">
+<div class="panel panel-heading panel-heading-custom">Transaction Generation</div>
+<div class="panel-body">
+<form>
+  <div class="form-group">
+    <label for="transact-path">From Address (C32):</label>
+    <input type="text" id="from-address" class="form-control" style="width:400pt;" autocomplete="off" value="SM36AE53BQ3SH2YK4V02FREGFQYHYB7X95N417SK2" />
+  </div>
+  <div class="form-group">
+    <label for="transact-path">From public keys (comma separate):</label>
+    <textarea id="from-pubkeys" class="form-control" autocomplete="off" value="" rows="5" columns="80">03827ffa27ad5af481203d4cf5654cd20312398fa92084ff76e4b4dffddafe1059,03a9d11f6d4102ed323740f95668d6f206c5b5cbc5ce5c7028ceba1736fbbd6861,0205132dbd1270f66adaf43723940a98be6331abe95bfa53838815bf214a5a2150</textarea>
+  </div>
+  <div class="form-group">
+    <label for="transact-path">Required signers (number):</label>
+    <input type="text" id="from-n" class="form-control" style="width:400pt;" autocomplete="off" value="2" />
+  </div>
+  <div class="form-group">
+    <label for="transact-input">To Address (C32):</label>
+    <input type="text" id="to-address" class="form-control" style="width:400pt;" autocomplete="off" value="SP000000000000000000002Q6VF78" />
+  </div>
+  <div class="form-group">
+    <label for="transact-input">microSTACKS (10^-6 STACKS) to send or stack (number):</label>
+    <input type="text" id="stacks-send" class="form-control" style="width:400pt;" autocomplete="off" value="1000" />
+  </div>
+  <div class="form-group">
+    <label for="transact-input">Pox Address (stacking only):</label>
+    <input type="text" id="pox-address" class="form-control" style="width:400pt;" autocomplete="off" value="" />
+  </div>
+  <div class="form-group">
+    <label for="transact-input">Cycles to stack (stacking only):</label>
+    <input type="text" id="stack-cycles" class="form-control" style="width:400pt;" autocomplete="off" value="" />
+  </div>
+  <div class="form-group">
+    <button type="button" onClick="MultiStx.generate_transfer()" class="btn btn-primary">Generate Transfer TX</button>
+    <button type="button" onClick="MultiStx.generate_stacking()" class="btn btn-primary">Generate Stacking TX</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+<div class="container">
+<div class="panel panel-default">
+<div class="panel panel-heading panel-heading-custom">Transaction Signing</div>
+<div class="panel-body">
+<form>
+  <div class="form-group">
+    <label for="transact-path">Signer Path:</label>
+    <input type="text" id="transact-path" class="form-control" style="width:400pt;" autocomplete="off" value="m/44'/5757'/0'/0/0" />
+  </div>
+  <div class="form-group">
+    <label for="transact-device">Device:</label>
+    <select id="transact-device"  class="form-control" columns="20">
+      <option value="ledger-web-hid" selected>Ledger Web HID</option>
+    </select>
+  <div class="form-group">
+    <label for="transact-input">Partial transaction:</label>
+    <textarea id="transact-input" class="form-control" autocomplete="off" value="" rows="5" columns="80"></textarea>
+  </div>
+  <div class="form-group">
+    <button type="button" onClick="MultiStx.sign_partial()" class="btn btn-primary">Start Sign TX</button>
+    <button type="button" onClick="MultiStx.sign_and_complete()" class="btn btn-primary">Finish Sign TX</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+<div class="container">
+<div class="panel panel-default">
+<div class="panel panel-heading panel-heading-custom">Decode/Check Transaction</div>
+<div class="panel-body">
+<form>
+  <div class="form-group">
+    <label for="check-decode-input">Partial transaction:</label>
+    <textarea id="check-decode-input" class="form-control" autocomplete="off" value="" rows="5" columns="80"></textarea>
+  </div>
+  <div class="form-group">
+    <button type="button" onClick="checkDecode()" class="btn btn-primary">Check/Decode</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+<div class="invisible container" id="tx">
+<div class="panel panel-default">
+<div id="tx-title" class="panel panel-heading panel-heading-custom">Signed Transaction</div>
+<div class="panel-body">
+<p><strong><text id="tx-message"></text></strong></p>
+</div>
+</div>
+</div>
+</div>
+
+
+<div class="invisible container" id="xpub">
+<div class="panel panel-default">
+<div id="xpub-title" class="panel panel-heading panel-heading-custom">Wallet XPUB</div>
+<div class="panel-body">
+<p><strong><text id="xpub-message"></text></strong></p>
+</div>
+</div>
+</div>
+</div>
+

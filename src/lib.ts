@@ -1,6 +1,6 @@
 
-import SpecTransport from "@ledgerhq/hw-transport-node-speculos";
-import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
+//import SpecTransport from "@ledgerhq/hw-transport-node-speculos";
+//import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
 
 import StxApp from "@zondax/ledger-blockstack";
 import { LedgerError } from "@zondax/ledger-blockstack";
@@ -8,13 +8,11 @@ import { LedgerError } from "@zondax/ledger-blockstack";
 import * as btc from "bitcoinjs-lib";
 import * as C32 from "c32check";
 import { AddressVersion, TransactionAuthField, UnsignedMultiSigTokenTransferOptions } from "@stacks/transactions";
-import readline from "readline";
+// import readline from "readline";
 
 import BigNum from "bn.js";
 
 import * as StxTx from "@stacks/transactions";
-
-import { updateMultisigData, MultisigData, makeMultiSigAddr, decodeMultisigData, encodeMultisigData, ledgerSignMultisigTx } from "./lib";
 
 // This will generate pubkeys using
 //  the format: m/44'/5757'/0'/0/x
@@ -24,7 +22,22 @@ const XPUB_PATH = `m/44'/5757'/0'`;
 //  the format: m/5757'/0'/0/0/x
 const BTC_MULTISIG_SCRIPT_PATH = `m/5757'/0'/0`;
 
-async function getPubKey(app: StxApp, index: number): Promise<string> {
+export interface MultisigData {
+  tx: {
+    fee: string,
+    amount: string,
+    numSignatures: number,
+    recipient: string,
+    memo?: string,
+  },
+  spendingFields: {
+    publicKey: string,
+    signatureVRS?: string,
+  }[],
+  sigHashes: string[],
+}
+
+export async function getPubKey(app: StxApp, index: number): Promise<string> {
   let amt = (await app.getAddressAndPubKey(`${XPUB_PATH}/0/${index}`, StxTx.AddressVersion.TestnetSingleSig));
   console.log(amt);
   return amt.publicKey.toString('hex')
@@ -48,6 +61,14 @@ function makeSpendingConditionFields(multisigData: MultisigData): TransactionAut
   return fields
 }
 
+export function encodeMultisigData(multisigData: MultisigData) {
+  return Buffer.from(JSON.stringify(multisigData)).toString('base64');
+}
+
+export function decodeMultisigData(serialized: string): MultisigData {
+  return JSON.parse(Buffer.from(serialized, 'base64').toString());
+}
+
 function setMultisigTransactionSpendingConditionFields(tx: StxTx.StacksTransaction, fields: TransactionAuthField[]) {
   if (!tx.auth.spendingCondition) {
     throw new Error(`Multisig transaction cannot be finalized: did not have enough information in multisig data to initialize spending condition`);
@@ -58,7 +79,7 @@ function setMultisigTransactionSpendingConditionFields(tx: StxTx.StacksTransacti
   tx.auth.spendingCondition.fields = fields;
 }
 
-async function finalizeMultisigTransaction(multisigData: MultisigData): Promise<string> {
+export async function finalizeMultisigTransaction(multisigData: MultisigData): Promise<string> {
   if (multisigData.tx.numSignatures != multisigData.sigHashes.length) {
     throw new Error(`Multisig transaction cannot be finalized, expected ${multisigData.tx.numSignatures} signatures, but only found  ${multisigData.sigHashes.length}`);
   }
@@ -67,6 +88,11 @@ async function finalizeMultisigTransaction(multisigData: MultisigData): Promise<
   setMultisigTransactionSpendingConditionFields(unsignedTx, makeSpendingConditionFields(multisigData));
 
   return unsignedTx.serialize().toString('hex');
+}
+
+export function updateMultisigData(multisigData: MultisigData, sigHash: string, signatureVRS: string, index: number) {
+  multisigData.sigHashes.push(sigHash);
+  multisigData.spendingFields[index].signatureVRS = signatureVRS;
 }
 
 /// Builds an unsigned transfer out of a multisig data serialization
@@ -102,6 +128,37 @@ async function getLedgerSigningBuffer(multisigData: MultisigData): Promise<Buffe
   } else {
     throw new Error(`Ledger Stacks app does not support validating more than 2 signatures in multisig transactions`);
   }
+}
+
+export async function ledgerSignMultisigTx(app: StxApp, path: string, multisigData: MultisigData) {
+  const pubkey = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig))
+        .publicKey.toString('hex');
+  const pubkeys = multisigData.spendingFields
+        .map((x) => {
+          if (! x.signatureVRS) {
+            return x.publicKey
+          } else {
+            return null
+          }
+        });
+  const index = pubkeys.indexOf(pubkey);
+
+  if (index < 0) {
+    throw new Error(`Pubkey ${pubkey} not found in partial tx pubkeys: ${pubkeys}`);
+  }
+
+  const signingBuffer = await getLedgerSigningBuffer(multisigData);
+  const resp = await app.sign(path, signingBuffer);
+
+  if (resp.returnCode !== LedgerError.NoErrors) {
+    console.log(resp)
+    throw new Error('Ledger responded with errors');
+  }
+
+  const sigHash = resp.postSignHash.toString("hex");
+  const signatureVRS = resp.signatureVRS.toString("hex");
+
+  return { sigHash, signatureVRS, index }
 }
 
 async function ledgerSignTx(app: StxApp, path: string, partialFields: TransactionAuthField[], unsignedTx: Buffer, prevSigHash?: string) {
@@ -222,6 +279,17 @@ async function generateMultiUnsignedTx(app: StxApp) {
   return { unsignedTx, pubkeys: partialFields }
 }
 
+export function makeMultiSigAddr(pubkeys: string[], required: number) {
+  let authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
+  let redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
+  let btcAddr = btc.payments.p2sh({ redeem }).address;
+  if (!btcAddr) {
+    throw Error(`Failed to construct BTC address from pubkeys`);
+  }
+  let c32Addr = C32.b58ToC32(btcAddr);
+  return c32Addr
+}
+
 async function makeUnsignedTransfer(options: UnsignedMultiSigTokenTransferOptions) {
   const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer( options );
   const publicKeys = options.publicKeys.slice();
@@ -263,124 +331,3 @@ async function generateMultiSigAddr(app: StxApp) {
 
   return makeMultiSigAddr([pk0, pk1, pk2], 2);
 }
-
-async function readInput(query: string): Promise<string> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  const answer: string = await new Promise(resolve => {
-    rl.question(`${query}? `, answer => resolve(answer))
-  });
-
-  rl.close();
-
-  return answer;
-}
-
-async function main(args: string[]) {
-  if (args[0] == "create_transfer") {
-    let fromAddress = (await readInput("From Address (C32)")).trim();
-    let publicKeys = (await readInput("From public keys (comma separate)"))
-        .trim().split(',').map(x => x.trim());
-    let requiredSigners = parseInt(await readInput("Required signers (number)"));
-    let toAddress = (await readInput("Required signers (number)")).trim();
-    let toSend = new BigNum((await readInput("microSTX to send")).trim(), 10);
-    let fee = new BigNum((await readInput("microSTX fee")).trim(), 10);
-
-    let memo = await readInput("Memo");
-
-    publicKeys = checkAddressPubKeyMatch(publicKeys, requiredSigners, fromAddress);
-
-    console.log(`Creating unsigned transfer with ${fromAddress} using ${publicKeys}/${requiredSigners}`);
-    return
-  }
-
-  if (args[0] == "make_soft_multi") {
-    let signed = await generateMultiSignedTx();
-    console.log(`Signed tx: ${signed.serialize().toString('hex')}`);
-    return
-  }
-
-  let transport = await SpecTransport.open({ apduPort: 40000 });
-//    let transport = await TransportNodeHid.create();
-
-  if (args[0] == "get_pub") {
-    let app = new StxApp(transport);
-    console.log(`Path: ${XPUB_PATH}/0/0`);
-    let pubkey = await getPubKey(app, 0);
-    console.log(`Pub: ${pubkey}`);
-  } else if (args[0] == "make_multi") {
-    let app = new StxApp(transport);
-    let addr = await generateMultiSigAddr(app);
-    console.log(`Addr: ${addr}`);
-  } else if (args[0] == "make_sign_multi") {
-    let app = new StxApp(transport);
-    let { unsignedTx, pubkeys } = await generateMultiUnsignedTx(app);
-
-    let fullyUnsignedTx = unsignedTx.serialize();
-    console.log(`Unsigned tx: ${unsignedTx.serialize().toString('hex')}`);
-
-    let result = await ledgerSignTx(app, `${XPUB_PATH}/0/0`, pubkeys, fullyUnsignedTx);
-    let out1 = result.outFields;
-    let post_sighash = result.next_sighash;
-
-    setMultisigTransactionSpendingConditionFields(unsignedTx, out1);
-
-    result = await ledgerSignTx(app, `${XPUB_PATH}/0/1`, out1, fullyUnsignedTx, post_sighash);
-    let out2 = result.outFields;
-    post_sighash = result.next_sighash;
-
-    setMultisigTransactionSpendingConditionFields(unsignedTx, out2);
-
-    console.log(`Finished tx: ${unsignedTx.serialize().toString('hex')}`);
-  } else if (args[0] == "make_sign_multi_3") {
-    let app = new StxApp(transport);
-    let tx = {
-      fee: "300",
-      amount: "1000",
-      numSignatures: 2,
-      recipient: "SP000000000000000000002Q6VF78",
-    }
-
-    let pubkeys = [
-      '03827ffa27ad5af481203d4cf5654cd20312398fa92084ff76e4b4dffddafe1059',
-//      '03a9d11f6d4102ed323740f95668d6f206c5b5cbc5ce5c7028ceba1736fbbd6861',
-      '0205132dbd1270f66adaf43723940a98be6331abe95bfa53838815bf214a5a2150'
-    ];
-
-    let spendingFields = pubkeys.map((x) => { return { publicKey: x } });
-    let sigHashes: string[] = [];
-
-    let multisigData: MultisigData = { tx, spendingFields, sigHashes };
-
-    let encoded = encodeMultisigData(multisigData);
-    console.log(`Unsigned payload: ${encoded}`);
-    multisigData = decodeMultisigData(encoded);
-
-    let { sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, `${XPUB_PATH}/0/0`, multisigData);
-    updateMultisigData(multisigData, sigHash, signatureVRS, index);
-
-    encoded = encodeMultisigData(multisigData);
-    console.log(`Signed once payload: ${encoded}`);
-    multisigData = decodeMultisigData(encoded);
-
-    ({ sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, `${XPUB_PATH}/0/2`, multisigData));
-    updateMultisigData(multisigData, sigHash, signatureVRS, index);
-
-    encoded = encodeMultisigData(multisigData);
-    console.log(`Signed twice payload: ${encoded}`);
-    multisigData = decodeMultisigData(encoded);
-
-
-    console.log(`Finalized: ${await finalizeMultisigTransaction(multisigData)}`);
-  }
-
-  await transport.close();
-}
-
-var inputs = process.argv.slice(2);
-
-main(inputs)
-  .then(x => { console.log("") })

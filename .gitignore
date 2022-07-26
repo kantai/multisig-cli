@@ -1,2 +1,3 @@
+dist
+node-dist
 node_modules
-src/index.js
