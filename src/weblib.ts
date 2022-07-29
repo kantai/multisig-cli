@@ -4,7 +4,7 @@ export * from './lib';
 import { MultisigData, updateMultisigData, decodeMultisigData, encodeMultisigData, makeMultiSigAddr, ledgerSignMultisigTx, finalizeMultisigTransaction } from './lib';
 import StxApp from "@zondax/ledger-blockstack";
 import LedgerTransportWeb from '@ledgerhq/hw-transport-webhid';
-import SpeculosTransportHttp from "@ledgerhq/hw-transport-node-speculos-http";
+import BlockstackApp from '@zondax/ledger-blockstack';
 
 function getInputElement(id: string): string {
     return (document.getElementById(id)! as HTMLInputElement).value.trim()
@@ -22,10 +22,22 @@ export function displayMessage(name: string, message: string, title: string) {
     }
 }
 
-export async function sign_and_complete() {
-    try {
+let LEDGER_APP_CONN: undefined | BlockstackApp = undefined;
+
+export async function connectLedgerApp() {
+    if (!LEDGER_APP_CONN) {
         const transport = await LedgerTransportWeb.create();
         const app = new StxApp(transport);
+        LEDGER_APP_CONN = app;
+        return app;
+    } else {
+        return LEDGER_APP_CONN;
+    }
+}
+
+export async function sign_and_complete() {
+    try {
+        const app = await connectLedgerApp();
         const inputPayload = getInputElement('transact-input');
         const hdPath = getInputElement('transact-path');
 
@@ -42,8 +54,7 @@ export async function sign_and_complete() {
 
 export async function sign_partial() {
     try {
-        const transport = await LedgerTransportWeb.create();
-        const app = new StxApp(transport);
+        const app = await connectLedgerApp();
         const inputPayload = getInputElement('transact-input');
         const hdPath = getInputElement('transact-path');
 

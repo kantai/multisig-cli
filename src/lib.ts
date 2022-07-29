@@ -39,7 +39,6 @@ export interface MultisigData {
 
 export async function getPubKey(app: StxApp, path: string): Promise<string> {
     let amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
-    console.log(amt);
     return amt.publicKey.toString('hex')
 }  
 
@@ -48,10 +47,10 @@ export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number
   return getPubKey(app, path);
 }
 
-export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number): Promise<string> {
+export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number): Promise<{pubkey: string, path: string}> {
     const path = `${BTC_MULTISIG_SCRIPT_PATH}/0/${index}`;
-    return getPubKey(app, path);
-  }
+    return {pubkey: await getPubKey(app, path), path};
+}
   
 /// Builds spending condition fields out of a multisig data serialization
 function makeSpendingConditionFields(multisigData: MultisigData): TransactionAuthField[] {

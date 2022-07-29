@@ -177,7 +177,11 @@ async function generateMultiSigAddr(app: StxApp) {
   let pk1 = await getPubKeyMultisigStandardIndex(app, 1);
   let pk2 = await getPubKeyMultisigStandardIndex(app, 2);
 
-  return makeMultiSigAddr([pk0, pk1, pk2].sort(), 2);
+  let pubkeys = [pk0, pk1, pk2].sort((a, b) => a.pubkey.localeCompare(b.pubkey));
+  console.log(`Making a 2 - of - ${pubkeys.length} multisig address...`);
+  console.log(`Pubkeys: ${pubkeys[0].pubkey}, ${pubkeys[1].pubkey}, ${pubkeys[2].pubkey}`);
+  console.log(`Paths: ${pubkeys[0].path}, ${pubkeys[1].path}, ${pubkeys[2].path}`);
+  return makeMultiSigAddr([pubkeys[0].pubkey, pubkeys[1].pubkey, pubkeys[2].pubkey], 2);
 }
 
 async function readInput(query: string): Promise<string> {
@@ -192,29 +196,12 @@ async function readInput(query: string): Promise<string> {
 
   rl.close();
 
-  return answer;
+  return answer.trim();
 }
 
 async function main(args: string[]) {
-  if (args[0] == "create_transfer") {
-    let fromAddress = (await readInput("From Address (C32)")).trim();
-    let publicKeys = (await readInput("From public keys (comma separate)"))
-        .trim().split(',').map(x => x.trim());
-    let requiredSigners = parseInt(await readInput("Required signers (number)"));
-    let toAddress = (await readInput("Required signers (number)")).trim();
-    let toSend = new BigNum((await readInput("microSTX to send")).trim(), 10);
-    let fee = new BigNum((await readInput("microSTX fee")).trim(), 10);
-
-    let memo = await readInput("Memo");
-
-    publicKeys = checkAddressPubKeyMatch(publicKeys, requiredSigners, fromAddress);
-
-    console.log(`Creating unsigned transfer with ${fromAddress} using ${publicKeys}/${requiredSigners}`);
-    return
-  }
-
-//  let transport = await SpecTransport.open({ apduPort: 40000 });
-    let transport = await TransportNodeHid.create();
+  let transport = await SpecTransport.open({ apduPort: 40000 });
+//    let transport = await TransportNodeHid.create();
 
   if (args[0] == "get_pub") {
     let app = new StxApp(transport);
@@ -228,6 +215,57 @@ async function main(args: string[]) {
     let app = new StxApp(transport);
     let addr = await generateMultiSigAddr(app);
     console.log(`Addr: ${addr}`);
+  } else if (args[0] == "create_tx") {
+    const fromAddr = (await readInput("From Address (C32)"));
+    const fromPKsHex = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim()).sort();
+    const requiredSigners = parseInt(await readInput("Required signers (number)"));
+    const toAddress = await readInput("To Address (C32)");
+    const toSend = await readInput("microSTX to send");
+    const fee = await readInput("microSTX fee");
+
+    const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
+    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, requiredSigners);
+
+    if (generatedMultiSigAddress !== fromAddr) {
+        const message = `Public keys, required signers do not match expected address: expected=${fromAddr}, generated=${generatedMultiSigAddress}`;
+        throw new Error(message);
+    }
+
+    let multisigData: MultisigData = {
+        tx: {
+            fee,
+            amount: toSend,
+            numSignatures: requiredSigners,
+            recipient: toAddress,
+        },
+        spendingFields,
+        sigHashes: [],
+    };
+
+    let encoded = encodeMultisigData(multisigData);
+    console.log(`Unsigned transaction payload: ${encoded}`)
+  } else if (args[0] == "sign_partial") {
+    let app = new StxApp(transport);
+    const inputPayload = await readInput("Partial transaction input");
+    const hdPath = await readInput("Signer path (HD derivation path)");
+
+    const multisigData = decodeMultisigData(inputPayload);
+    console.log("    *** Please check and approve signing on Ledger ***");
+    const { sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, hdPath, multisigData);
+    updateMultisigData(multisigData, sigHash, signatureVRS, index);
+    let encoded = encodeMultisigData(multisigData);
+    console.log(`Partially signed transaction payload: ${encoded}`)    
+  } else if (args[0] == "sign_final") {
+    let app = new StxApp(transport);
+    const inputPayload = await readInput("Partial transaction input");
+    const hdPath = await readInput("Signer path (HD derivation path)");
+
+    const multisigData = decodeMultisigData(inputPayload);
+    console.log("    *** Please check and approve signing on Ledger ***");
+    const { sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, hdPath, multisigData);
+    updateMultisigData(multisigData, sigHash, signatureVRS, index);
+    let finished = await finalizeMultisigTransaction(multisigData);
+    console.log(`Fully signed tx: ${finished}`);
   }
 
   await transport.close();
