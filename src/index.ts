@@ -14,7 +14,7 @@ import BigNum from "bn.js";
 
 import * as StxTx from "@stacks/transactions";
 
-import { updateMultisigData, MultisigData, makeMultiSigAddr, decodeMultisigData, encodeMultisigData, ledgerSignMultisigTx, finalizeMultisigTransaction, getPubKey, getPubKeyMultisigStandardIndex, getPubKeySingleSigStandardIndex } from "./lib";
+import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, base64_deserialize, base64_serialize, ledgerSignMultisigTx, getPubKey, getPubKeyMultisigStandardIndex, getPubKeySingleSigStandardIndex } from "./lib";
 
 function setMultisigTransactionSpendingConditionFields(tx: StxTx.StacksTransaction, fields: TransactionAuthField[]) {
   if (!tx.auth.spendingCondition) {
@@ -200,8 +200,8 @@ async function readInput(query: string): Promise<string> {
 }
 
 async function main(args: string[]) {
-  let transport = await SpecTransport.open({ apduPort: 40000 });
-//    let transport = await TransportNodeHid.create();
+  //let transport = await SpecTransport.open({ apduPort: 40000 });
+  let transport = await TransportNodeHid.create();
 
   if (args[0] == "get_pub") {
     let app = new StxApp(transport);
@@ -231,7 +231,8 @@ async function main(args: string[]) {
         throw new Error(message);
     }
 
-    let multisigData: MultisigData = {
+    // Contains tx + metadata
+    const multisigData: MultisigData = {
         tx: {
             fee,
             amount: toSend,
@@ -242,30 +243,21 @@ async function main(args: string[]) {
         sigHashes: [],
     };
 
-    let encoded = encodeMultisigData(multisigData);
-    console.log(`Unsigned transaction payload: ${encoded}`)
-  } else if (args[0] == "sign_partial") {
-    let app = new StxApp(transport);
-    const inputPayload = await readInput("Partial transaction input");
+    const tx = await makeStxTokenTransferFrom(multisigData);
+    // TODO: Make sure pubkeys are in transaction auth fields
+
+    let encoded = base64_serialize(tx);
+    console.log(`Unsigned multisig transaction: ${encoded}`)
+  } else if (args[0] == "sign") {
+    const app = new StxApp(transport);
+    const inputPayload = await readInput("Unsigned or partially signed transaction input");
     const hdPath = await readInput("Signer path (HD derivation path)");
 
-    const multisigData = decodeMultisigData(inputPayload);
+    const tx = base64_deserialize(inputPayload) as StxTx.StacksTransaction;
     console.log("    *** Please check and approve signing on Ledger ***");
-    const { sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, hdPath, multisigData);
-    updateMultisigData(multisigData, sigHash, signatureVRS, index);
-    let encoded = encodeMultisigData(multisigData);
-    console.log(`Partially signed transaction payload: ${encoded}`)    
-  } else if (args[0] == "sign_final") {
-    let app = new StxApp(transport);
-    const inputPayload = await readInput("Partial transaction input");
-    const hdPath = await readInput("Signer path (HD derivation path)");
-
-    const multisigData = decodeMultisigData(inputPayload);
-    console.log("    *** Please check and approve signing on Ledger ***");
-    const { sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, hdPath, multisigData);
-    updateMultisigData(multisigData, sigHash, signatureVRS, index);
-    let finished = await finalizeMultisigTransaction(multisigData);
-    console.log(`Fully signed tx: ${finished}`);
+    const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
+    const encoded = base64_serialize(signed_tx);
+    console.log(`Signed multisig transaction: ${encoded}`)    
   }
 
   await transport.close();

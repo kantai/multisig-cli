@@ -1,10 +1,12 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 export * from './lib';
 
-import { MultisigData, updateMultisigData, decodeMultisigData, encodeMultisigData, makeMultiSigAddr, ledgerSignMultisigTx, finalizeMultisigTransaction } from './lib';
+import { MultisigData, base64_deserialize, base64_serialize, makeMultiSigAddr, ledgerSignMultisigTx, makeStxTokenTransferFrom } from './lib';
 import StxApp from "@zondax/ledger-blockstack";
 import LedgerTransportWeb from '@ledgerhq/hw-transport-webhid';
 import BlockstackApp from '@zondax/ledger-blockstack';
+
+import * as StxTx from "@stacks/transactions";
 
 function getInputElement(id: string): string {
     return (document.getElementById(id)! as HTMLInputElement).value.trim()
@@ -35,41 +37,23 @@ export async function connectLedgerApp() {
     }
 }
 
-export async function sign_and_complete() {
+export async function sign() {
     try {
         const app = await connectLedgerApp();
         const inputPayload = getInputElement('transact-input');
         const hdPath = getInputElement('transact-path');
 
-        const multisigData = decodeMultisigData(inputPayload);
-        const { sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, hdPath, multisigData);
-        updateMultisigData(multisigData, sigHash, signatureVRS, index);
-        let finished = await finalizeMultisigTransaction(multisigData);
-        displayMessage('tx', `Finalized tx: <br/> <br/> ${finished}`, 'Finalized tx')    
-    } catch(e: any) {
-        displayMessage('tx', e.toString(), "Error signing transaction");
-        throw e;
-    }  
-}
-
-export async function sign_partial() {
-    try {
-        const app = await connectLedgerApp();
-        const inputPayload = getInputElement('transact-input');
-        const hdPath = getInputElement('transact-path');
-
-        const multisigData = decodeMultisigData(inputPayload);
-        const { sigHash, signatureVRS, index } = await ledgerSignMultisigTx(app, hdPath, multisigData);
-        updateMultisigData(multisigData, sigHash, signatureVRS, index);
-        let encoded = encodeMultisigData(multisigData);
-        displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Partial Transaction')    
+        const tx = base64_deserialize(inputPayload) as StxTx.StacksTransaction;
+        const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
+        let encoded = base64_serialize(signed_tx);
+        displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Signed Transaction')    
     } catch(e: any) {
         displayMessage('tx', e.toString(), "Error signing transaction");
         throw e;
     }
 }
 
-export function generate_transfer() {
+export async function generate_transfer() {
     const fromAddr = getInputElement('from-address');
     const fromPKsHex = getInputElement('from-pubkeys').split(',').map(x => x.trim()).sort();
     const requiredSigners = parseInt(getInputElement('from-n'));
@@ -97,7 +81,10 @@ export function generate_transfer() {
         sigHashes: [],
     };
 
-    let encoded = encodeMultisigData(multisigData);
+    const tx = await makeStxTokenTransferFrom(multisigData);
+    // TODO: Make sure pubkeys are in transaction auth fields
+
+    let encoded = base64_serialize(tx);
     displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Unsigned Transaction')
 }
 
