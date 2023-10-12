@@ -43,6 +43,11 @@ async function main(args: string[]) {
     }
     let pubkey = await getPubKey(app, path);
     console.log(`Pub: ${pubkey} @  ${path}`);
+  } else if (args[0] == "decode") {
+    // Decode and print transaction
+    const inputPayload = await readInput("Transaction input (base64)");
+    const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
+    console.log(tx)
   } else if (args[0] == "make_multi") {
     let app = new StxApp(transport);
     let addr = await generateMultiSigAddr(app);
@@ -81,7 +86,7 @@ async function main(args: string[]) {
     console.log(`Unsigned multisig transaction: ${encoded}`)
   } else if (args[0] == "sign") {
     const app = new StxApp(transport);
-    const inputPayload = await readInput("Unsigned or partially signed transaction input");
+    const inputPayload = await readInput("Unsigned or partially signed transaction input (base64)");
     const hdPath = await readInput("Signer path (HD derivation path)");
 
     const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
