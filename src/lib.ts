@@ -37,6 +37,11 @@ export interface MultisigData {
   sigHashes: string[],
 }
 
+// Need this to serialize BitInt
+(BigInt.prototype as any).toJSON = function() {
+  return this.toString()
+}
+
 export function base64Serialize(data: Object): string {
   return Buffer.from(JSON.stringify(data)).toString('base64');
 }
@@ -265,7 +270,7 @@ async function ledgerSignTx(app: StxApp, path: string, partialFields: Transactio
   return { outFields, next_sighash };
 }
 
-async function generateMultiSignedTx() {
+export async function generateMultiSignedTx() {
   let privkeys = [
     'dd7229314db5d50122cd8d4ff8975f57317f54c946cd233d8d35f5b616fe961e01',
     '119a851bd1201b93e6477a0a9c7d29515735530df92ab265166ca3da119f803501',
@@ -301,8 +306,7 @@ async function generateMultiSignedTx() {
   return transaction
 }
 
-
-async function generateMultiUnsignedTx(app: StxApp) {
+export async function generateMultiUnsignedTx(app: StxApp) {
   const pubkeys = [
     '03827ffa27ad5af481203d4cf5654cd20312398fa92084ff76e4b4dffddafe1059',
     '03a9d11f6d4102ed323740f95668d6f206c5b5cbc5ce5c7028ceba1736fbbd6861',

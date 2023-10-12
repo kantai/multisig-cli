@@ -16,7 +16,8 @@
   },
   "scripts": {
     "webpack": "rm -rf ./dist && webpack",
-    "cli": "npx ts-node ./src/index.ts",
+    "cli": "ts-node ./src/index.ts",
+    "test": "vitest",
     "start": "npm run cli"
   },
   "devDependencies": {
@@ -27,6 +28,7 @@
     "buffer": "^6.0.3",
     "css-loader": "^6.7.1",
     "html-webpack-plugin": "^5.5.0",
-    "stream-browserify": "^3.0.0"
+    "stream-browserify": "^3.0.0",
+    "vitest": "^0.34.6"
   }
 }

@@ -28,12 +28,12 @@ The general work flow should go something like this:
 1. Get any Ledger public keys needed
    ```sh
    npm start -- get_pub
-   ``````
+   ```
 
 2. Create a multisig address from pubkeys
    ```sh
    npm start -- make_multi
-   ``````
+   ```
 
 3. Use any wallet to send funds to the address
 
@@ -44,14 +44,14 @@ You will need the multisig address and pubkeys from the previous section
 1. Create a transaction
    ```sh
    npm start -- create_tx
-   ``````
+   ```
 
 2. For each required signature, sign with Ledger
    ```sh
    npm start -- sign
-   ``````
+   ```
 
 3. **[Optional]** Print transaction as JSON to check
    ```sh
    npm start -- decode
-   ``````
+   ```
