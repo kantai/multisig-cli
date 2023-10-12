@@ -37,6 +37,14 @@ export interface MultisigData {
   sigHashes: string[],
 }
 
+export function base64Serialize(data: Object): string {
+  return Buffer.from(JSON.stringify(data)).toString('base64');
+}
+
+export function base64Deserialize(serialized: string): Object {
+  return JSON.parse(Buffer.from(serialized, 'base64').toString());
+}
+
 export async function getPubKey(app: StxApp, path: string): Promise<string> {
     let amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
     return amt.publicKey.toString('hex')
@@ -50,6 +58,18 @@ export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number
 export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number): Promise<{pubkey: string, path: string}> {
     const path = `${BTC_MULTISIG_SCRIPT_PATH}/0/${index}`;
     return {pubkey: await getPubKey(app, path), path};
+}
+
+export async function generateMultiSigAddr(app: StxApp) {
+  let pk0 = await getPubKeyMultisigStandardIndex(app, 0);
+  let pk1 = await getPubKeyMultisigStandardIndex(app, 1);
+  let pk2 = await getPubKeyMultisigStandardIndex(app, 2);
+
+  let pubkeys = [pk0, pk1, pk2].sort((a, b) => a.pubkey.localeCompare(b.pubkey));
+  console.log(`Making a 2 - of - ${pubkeys.length} multisig address...`);
+  console.log(`Pubkeys: ${pubkeys[0].pubkey}, ${pubkeys[1].pubkey}, ${pubkeys[2].pubkey}`);
+  console.log(`Paths: ${pubkeys[0].path}, ${pubkeys[1].path}, ${pubkeys[2].path}`);
+  return makeMultiSigAddr([pubkeys[0].pubkey, pubkeys[1].pubkey, pubkeys[2].pubkey], 2);
 }
 
 export function makeMultiSigAddr(pubkeys: string[], required: number) {
@@ -79,14 +99,6 @@ function makeSpendingConditionFields(multisigData: MultisigData): TransactionAut
         return StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, x);
       })
   return fields
-}
-
-export function base64Serialize(data: Object): string {
-  return Buffer.from(JSON.stringify(data)).toString('base64');
-}
-
-export function base64Deserialize(serialized: string): Object {
-  return JSON.parse(Buffer.from(serialized, 'base64').toString());
 }
 
 function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fields: TransactionAuthField[]) {
@@ -127,13 +139,11 @@ export interface AuthFieldInfo {
 }
 
 export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
-  // Check transaction is correct type
-  const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
-
   let authFields = 0;
   let pubkeys = 0;
   let signatures = 0;
 
+  const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
   spendingCondition.fields.forEach(f => {
     authFields += 1;
     const type = f.contents.type;

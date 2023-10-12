@@ -83,7 +83,6 @@ export async function generate_transfer() {
     };
 
     const tx = await makeStxTokenTransferFrom(multisigData);
-    // TODO: Make sure pubkeys are in transaction auth fields
 
     let encoded = base64Serialize(tx);
     displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Unsigned Transaction')
