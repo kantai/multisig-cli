@@ -12,11 +12,11 @@ npm start -- <subcommand> [args]
 
 | Subcommand       | Description                                                    |
 | ---------------- | -------------------------------------------------------------- |
-| `decode`         | Decode and print Stacks base64-encoded transaction             |
-| `get_pub`        | Get public key from Ledger                                     |
+| `get_pub <path>` | Get public key from Ledger                                     |
 | `make_multi`     | Make multisig address from pubkeys                             |
 | `create_tx`      | Create unsigned multisig transaction                           |
 | `sign`           | Sign multisig transaction with Ledger                          |
+| `decode`         | Decode and print Stacks base64-encoded transaction             |
 
 While using this tool, inputs/outputs will be in base64-encoded JSON.
 You will need to copy/paste this between steps to manage application state.
@@ -27,7 +27,7 @@ The general work flow should go something like this:
 
 1. Get any Ledger public keys needed
    ```sh
-   npm start -- get_pub
+   npm start -- get_pub <path>
    ```
 
 2. Create a multisig address from pubkeys
