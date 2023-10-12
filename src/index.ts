@@ -14,7 +14,7 @@ import BigNum from "bn.js";
 
 import * as StxTx from "@stacks/transactions";
 
-import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, base64_deserialize, base64_serialize, ledgerSignMultisigTx, getPubKey, getPubKeyMultisigStandardIndex, getPubKeySingleSigStandardIndex } from "./lib";
+import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, base64Deserialize, base64Serialize, ledgerSignMultisigTx, getPubKey, getPubKeyMultisigStandardIndex, getPubKeySingleSigStandardIndex, getAuthFieldInfo } from "./lib";
 
 function setMultisigTransactionSpendingConditionFields(tx: StxTx.StacksTransaction, fields: TransactionAuthField[]) {
   if (!tx.auth.spendingCondition) {
@@ -246,18 +246,19 @@ async function main(args: string[]) {
     const tx = await makeStxTokenTransferFrom(multisigData);
     // TODO: Make sure pubkeys are in transaction auth fields
 
-    let encoded = base64_serialize(tx);
+    let encoded = base64Serialize(tx);
     console.log(`Unsigned multisig transaction: ${encoded}`)
   } else if (args[0] == "sign") {
     const app = new StxApp(transport);
     const inputPayload = await readInput("Unsigned or partially signed transaction input");
     const hdPath = await readInput("Signer path (HD derivation path)");
 
-    const tx = base64_deserialize(inputPayload) as StxTx.StacksTransaction;
+    const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
     console.log("    *** Please check and approve signing on Ledger ***");
     const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
-    const encoded = base64_serialize(signed_tx);
-    console.log(`Signed multisig transaction: ${encoded}`)    
+    const info = getAuthFieldInfo(tx);
+    const encoded = base64Serialize(signed_tx);
+    console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): ${encoded}`)
   }
 
   await transport.close();

@@ -1,7 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 export * from './lib';
 
-import { MultisigData, base64_deserialize, base64_serialize, makeMultiSigAddr, ledgerSignMultisigTx, makeStxTokenTransferFrom } from './lib';
+import { MultisigData, getAuthFieldInfo, base64Deserialize, base64Serialize, makeMultiSigAddr, ledgerSignMultisigTx, makeStxTokenTransferFrom } from './lib';
 import StxApp from "@zondax/ledger-blockstack";
 import LedgerTransportWeb from '@ledgerhq/hw-transport-webhid';
 import BlockstackApp from '@zondax/ledger-blockstack';
@@ -43,10 +43,11 @@ export async function sign() {
         const inputPayload = getInputElement('transact-input');
         const hdPath = getInputElement('transact-path');
 
-        const tx = base64_deserialize(inputPayload) as StxTx.StacksTransaction;
+        const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
         const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
-        let encoded = base64_serialize(signed_tx);
-        displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Signed Transaction')    
+        const info = getAuthFieldInfo(tx);
+        let encoded = base64Serialize(signed_tx);
+        displayMessage('tx', `Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): <br/> <br/> ${encoded}`, 'Signed Transaction')
     } catch(e: any) {
         displayMessage('tx', e.toString(), "Error signing transaction");
         throw e;
@@ -84,7 +85,7 @@ export async function generate_transfer() {
     const tx = await makeStxTokenTransferFrom(multisigData);
     // TODO: Make sure pubkeys are in transaction auth fields
 
-    let encoded = base64_serialize(tx);
+    let encoded = base64Serialize(tx);
     displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Unsigned Transaction')
 }
 

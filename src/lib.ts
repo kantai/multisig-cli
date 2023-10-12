@@ -81,11 +81,11 @@ function makeSpendingConditionFields(multisigData: MultisigData): TransactionAut
   return fields
 }
 
-export function base64_serialize(data: Object): string {
+export function base64Serialize(data: Object): string {
   return Buffer.from(JSON.stringify(data)).toString('base64');
 }
 
-export function base64_deserialize(serialized: string): Object {
+export function base64Deserialize(serialized: string): Object {
   return JSON.parse(Buffer.from(serialized, 'base64').toString());
 }
 
@@ -119,6 +119,44 @@ export async function makeStxTokenTransferFrom(multisigData: MultisigData) {
   return unsignedTx
 }
 
+export interface AuthFieldInfo {
+    authFields: number,
+    pubkeys: number,
+    signatures: number,
+    signaturesRequired: number,
+}
+
+export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
+  // Check transaction is correct type
+  const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
+
+  let authFields = 0;
+  let pubkeys = 0;
+  let signatures = 0;
+
+  spendingCondition.fields.forEach(f => {
+    authFields += 1;
+    const type = f.contents.type;
+    switch (type) {
+      case StxTx.StacksMessageType.PublicKey:
+        pubkeys += 1;
+        break;
+      case StxTx.StacksMessageType.MessageSignature:
+        signatures += 1;
+        break;
+      default:
+        console.error(`Unknown auth field type: ${type}`)
+    }
+  });
+
+  return {
+    authFields,
+    pubkeys,
+    signatures,
+    signaturesRequired: spendingCondition.signaturesRequired,
+  };
+}
+
 export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: StacksTransaction): Promise<StacksTransaction> {
   const pubkey = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig))
         .publicKey.toString('hex');
@@ -135,8 +173,9 @@ export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: Stacks
   }
 
   // Match pubkey in auth fields
+  let numSignatures = 0;
   const pubkeys = authFields.map(f => {
-    if (f.contents.type == StxTx.StacksMessageType.PublicKey) {
+    if (f.contents.type === StxTx.StacksMessageType.PublicKey) {
       return f.contents.data.toString('hex');
     } else {
       return null;
