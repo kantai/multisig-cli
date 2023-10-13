@@ -4,9 +4,6 @@ import * as lib from "../src/lib"
 import * as C32 from "c32check";
 import * as StxTx from "@stacks/transactions";
 
-const C32_ADDRESS_VERSION_MAINNET_MULTISIG = 20;
-const C32_ADDRESS_VERSION_TESTNET_MULTISIG = 21;
-
 test('vitest running', () => {
   expect(true).toBe(true)
 })
@@ -28,7 +25,9 @@ test('Multisig address generation', () => {
     "03ef2340518b5867b23598a9cf74611f8b98064f7d55cdb8c107c67b5efcbc5c77", // 3
   ];
   const c32_address = lib.makeMultiSigAddr(pubkeys, 2);
-  const c32_expected = C32.c32address(C32_ADDRESS_VERSION_MAINNET_MULTISIG, "b01162ecda72c57ed419f7966ec4e8dd7987c704");
+  // This Hash160 encodes as SM2R12RQCV9SCAZPM37VSCVP4X3EQK1Y70KCV7EDE
+  //const c32_expected = "SM2R12RQCV9SCAZPM37VSCVP4X3EQK1Y70KCV7EDE";
+  const c32_expected = C32.c32address(StxTx.AddressVersion.MainnetMultiSig, "b01162ecda72c57ed419f7966ec4e8dd7987c704");
   expect(c32_address).toBe(c32_expected);
 })
 

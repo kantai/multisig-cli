@@ -47,14 +47,14 @@ async function main(args: string[]) {
     // Decode and print transaction
     const inputPayload = await readInput("Transaction input (base64)");
     const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
-    console.log(tx)
+    console.dir(tx, {depth: null, colors: true})
   } else if (args[0] == "make_multi") {
     let app = new StxApp(transport);
     let addr = await generateMultiSigAddr(app);
     console.log(`Addr: ${addr}`);
   } else if (args[0] == "create_tx") {
     const fromAddr = await readInput("From Address (C32)");
-    const fromPKsHex = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim()).sort();
+    const fromPKsHex = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
     const requiredSigners = parseInt(await readInput("Required signers (number)"));
     const toAddress = await readInput("To Address (C32)");
     const toSend = await readInput("microSTX to send");
