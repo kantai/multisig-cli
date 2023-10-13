@@ -34,7 +34,6 @@ export interface MultisigData {
     publicKey: string,
     signatureVRS?: string,
   }[],
-  sigHashes: string[],
 }
 
 // Need this to serialize BitInt
@@ -77,7 +76,7 @@ export async function generateMultiSigAddr(app: StxApp) {
   return makeMultiSigAddr([pubkeys[0].pubkey, pubkeys[1].pubkey, pubkeys[2].pubkey], 2);
 }
 
-export function makeMultiSigAddr(pubkeys: string[], required: number) {
+export function makeMultiSigAddr(pubkeys: string[], required: number): string {
   let authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
   let redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
   let btcAddr = btc.payments.p2sh({ redeem }).address;
@@ -137,10 +136,10 @@ export async function makeStxTokenTransferFrom(multisigData: MultisigData) {
 }
 
 export interface AuthFieldInfo {
-    authFields: number,
-    pubkeys: number,
-    signatures: number,
-    signaturesRequired: number,
+  authFields: number,
+  pubkeys: number,
+  signatures: number,
+  signaturesRequired: number,
 }
 
 export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
@@ -270,7 +269,7 @@ async function ledgerSignTx(app: StxApp, path: string, partialFields: Transactio
   return { outFields, next_sighash };
 }
 
-export async function generateMultiSignedTx() {
+export async function generateMultiSignedTx(): Promise<StacksTransaction> {
   let privkeys = [
     'dd7229314db5d50122cd8d4ff8975f57317f54c946cd233d8d35f5b616fe961e01',
     '119a851bd1201b93e6477a0a9c7d29515735530df92ab265166ca3da119f803501',

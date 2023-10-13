@@ -79,7 +79,6 @@ export async function generate_transfer() {
             recipient: toAddress,
         },
         spendingFields,
-        sigHashes: [],
     };
 
     const tx = await makeStxTokenTransferFrom(multisigData);

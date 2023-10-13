@@ -42,7 +42,7 @@ async function main(args: string[]) {
       throw new Error("Must supply path as second argument");
     }
     let pubkey = await getPubKey(app, path);
-    console.log(`Pub: ${pubkey} @  ${path}`);
+    console.log(`Pub: ${pubkey} @ ${path}`);
   } else if (args[0] == "decode") {
     // Decode and print transaction
     const inputPayload = await readInput("Transaction input (base64)");
@@ -77,7 +77,6 @@ async function main(args: string[]) {
             recipient: toAddress,
         },
         spendingFields,
-        sigHashes: [],
     };
 
     const tx = await makeStxTokenTransferFrom(multisigData);
