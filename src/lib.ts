@@ -28,6 +28,7 @@ export interface MultisigData {
     amount: string,
     numSignatures: number,
     recipient: string,
+    nonce: number,
     memo?: string,
   },
   spendingFields: {
@@ -119,13 +120,15 @@ function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fi
 export async function makeStxTokenTransferFrom(multisigData: MultisigData) {
   const fee = new BigNum(multisigData.tx.fee, 10);
   const amount = new BigNum(multisigData.tx.amount, 10);
+  const nonce = new BigNum(multisigData.tx.nonce, 10);
   const numSignatures = multisigData.tx.numSignatures;
   const publicKeys = multisigData.spendingFields.slice().map(field => field.publicKey);
   const memo = multisigData.tx.memo;
   const recipient = multisigData.tx.recipient;
+  const network = "mainnet";
   const anchorMode = StxTx.AnchorMode.Any;
 
-  let unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer({ anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo });
+  let unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer({ anchorMode, fee, amount, numSignatures, publicKeys, recipient, nonce, network, memo });
 
   // Set public keys in auth fields
   // TODO: Is this necessary to set auth fields or already done by `makeUnsignedSTXTokenTransfer()`

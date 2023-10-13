@@ -54,6 +54,7 @@ test('Test transaction building', async () => {
       fee: "300",
       amount: "10000",
       numSignatures: 3,
+      nonce: 4,
       recipient: "ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH",
     },
     spendingFields: pubkeys.map(x => ({ publicKey: x })),
@@ -82,7 +83,7 @@ test('Test transaction building', async () => {
 
   it('Should have correct fee, nonce, and hash mode', () => {
     expect(spendingCondition.fee).toBe(300)
-    expect(spendingCondition.nonce).toBe(0)
+    expect(spendingCondition.nonce).toBe(4)
     expect(spendingCondition.hashMode).toBe(StxTx.AddressHashMode.SerializeP2SH)
   });
 })

@@ -77,6 +77,7 @@ export async function generate_transfer() {
             amount: toSend,
             numSignatures: requiredSigners,
             recipient: toAddress,
+            nonce: 0, // TODO: Allow input for this
         },
         spendingFields,
     };

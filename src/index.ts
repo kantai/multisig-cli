@@ -53,12 +53,14 @@ async function main(args: string[]) {
     let addr = await generateMultiSigAddr(app);
     console.log(`Addr: ${addr}`);
   } else if (args[0] == "create_tx") {
-    const fromAddr = (await readInput("From Address (C32)"));
+    const fromAddr = await readInput("From Address (C32)");
     const fromPKsHex = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim()).sort();
     const requiredSigners = parseInt(await readInput("Required signers (number)"));
     const toAddress = await readInput("To Address (C32)");
     const toSend = await readInput("microSTX to send");
     const fee = await readInput("microSTX fee");
+    const nonce = parseInt(await readInput("Nonce (optional)")) || 0;
+    //const network = (await readInput("Network (testnet/mainnet)")) || "mainnet";
 
     const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
     const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, requiredSigners);
@@ -75,6 +77,7 @@ async function main(args: string[]) {
             amount: toSend,
             numSignatures: requiredSigners,
             recipient: toAddress,
+            nonce,
         },
         spendingFields,
     };

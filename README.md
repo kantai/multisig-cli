@@ -39,7 +39,7 @@ The general work flow should go something like this:
 
 #### Sending funds
 
-You will need the multisig address and pubkeys from the previous section
+You will need the multisig address and pubkeys that were used in the previous section
 
 1. Create a transaction
    ```sh
