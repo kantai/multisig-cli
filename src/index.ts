@@ -33,15 +33,15 @@ async function readInput(query: string): Promise<string> {
 
 async function main(args: string[]) {
   //let transport = await SpecTransport.open({ apduPort: 40000 });
-  let transport = await TransportNodeHid.create();
+  const transport = await TransportNodeHid.create();
 
   if (args[0] == "get_pub") {
-    let app = new StxApp(transport);
+    const app = new StxApp(transport);
     const path = args[1];
     if (!path) {
       throw new Error("Must supply path as second argument");
     }
-    let pubkey = await getPubKey(app, path);
+    const pubkey = await getPubKey(app, path);
     console.log(`Pub: ${pubkey} @ ${path}`);
   } else if (args[0] == "decode") {
     // Decode and print transaction
@@ -49,8 +49,8 @@ async function main(args: string[]) {
     const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
     console.dir(tx, {depth: null, colors: true})
   } else if (args[0] == "make_multi") {
-    let app = new StxApp(transport);
-    let addr = await generateMultiSigAddr(app);
+    const app = new StxApp(transport);
+    const addr = await generateMultiSigAddr(app);
     console.log(`Addr: ${addr}`);
   } else if (args[0] == "create_tx") {
     const fromAddr = await readInput("From Address (C32)");
@@ -84,7 +84,7 @@ async function main(args: string[]) {
 
     const tx = await makeStxTokenTransferFrom(multisigData);
 
-    let encoded = base64Serialize(tx);
+    const encoded = base64Serialize(tx);
     console.log(`Unsigned multisig transaction: ${encoded}`)
   } else if (args[0] == "sign") {
     const app = new StxApp(transport);
@@ -102,7 +102,7 @@ async function main(args: string[]) {
   await transport.close();
 }
 
-var inputs = process.argv.slice(2);
+const inputs = process.argv.slice(2);
 
 main(inputs)
   .then(x => { console.log("") })

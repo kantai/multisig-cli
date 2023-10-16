@@ -17,18 +17,24 @@
   "scripts": {
     "webpack": "rm -rf ./dist && webpack",
     "cli": "ts-node ./src/index.ts",
-    "test": "vitest",
-    "start": "npm run cli"
+    "lint": "eslint .",
+    "lint-fix": "eslint --fix .",
+    "start": "npm run cli",
+    "test": "vitest"
   },
   "devDependencies": {
     "@ledgerhq/hw-transport-node-speculos-http": "^6.27.1",
     "@ledgerhq/hw-transport-webhid": "^6.27.1",
     "@ledgerhq/hw-transport-webusb": "^6.27.1",
+    "@typescript-eslint/eslint-plugin": "^6.7.5",
+    "@typescript-eslint/parser": "^6.7.5",
     "bootstrap": "^5.2.0",
     "buffer": "^6.0.3",
     "css-loader": "^6.7.1",
+    "eslint": "^8.51.0",
     "html-webpack-plugin": "^5.5.0",
     "stream-browserify": "^3.0.0",
+    "typescript": "^5.2.2",
     "vitest": "^0.34.6"
   }
 }

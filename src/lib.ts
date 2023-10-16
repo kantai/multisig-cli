@@ -51,7 +51,7 @@ export function base64Deserialize(serialized: string): Object {
 }
 
 export async function getPubKey(app: StxApp, path: string): Promise<string> {
-    let amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
+    const amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
     return amt.publicKey.toString('hex')
 }  
 
@@ -66,11 +66,11 @@ export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number)
 }
 
 export async function generateMultiSigAddr(app: StxApp) {
-  let pk0 = await getPubKeyMultisigStandardIndex(app, 0);
-  let pk1 = await getPubKeyMultisigStandardIndex(app, 1);
-  let pk2 = await getPubKeyMultisigStandardIndex(app, 2);
+  const pk0 = await getPubKeyMultisigStandardIndex(app, 0);
+  const pk1 = await getPubKeyMultisigStandardIndex(app, 1);
+  const pk2 = await getPubKeyMultisigStandardIndex(app, 2);
 
-  let pubkeys = [pk0, pk1, pk2].sort((a, b) => a.pubkey.localeCompare(b.pubkey));
+  const pubkeys = [pk0, pk1, pk2].sort((a, b) => a.pubkey.localeCompare(b.pubkey));
   console.log(`Making a 2 - of - ${pubkeys.length} multisig address...`);
   console.log(`Pubkeys: ${pubkeys[0].pubkey}, ${pubkeys[1].pubkey}, ${pubkeys[2].pubkey}`);
   console.log(`Paths: ${pubkeys[0].path}, ${pubkeys[1].path}, ${pubkeys[2].path}`);
@@ -78,19 +78,19 @@ export async function generateMultiSigAddr(app: StxApp) {
 }
 
 export function makeMultiSigAddr(pubkeys: string[], required: number): string {
-  let authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
-  let redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
-  let btcAddr = btc.payments.p2sh({ redeem }).address;
+  const authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
+  const redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
+  const btcAddr = btc.payments.p2sh({ redeem }).address;
   if (!btcAddr) {
     throw Error(`Failed to construct BTC address from pubkeys`);
   }
-  let c32Addr = C32.b58ToC32(btcAddr);
+  const c32Addr = C32.b58ToC32(btcAddr);
   return c32Addr
 }
   
 /// Builds spending condition fields out of a multisig data serialization
 function makeSpendingConditionFields(multisigData: MultisigData): TransactionAuthField[] {
-  let fields = multisigData.spendingFields
+  const fields = multisigData.spendingFields
       .map((field) => {
         if (field.signatureVRS) {
           return StxTx.createMessageSignature(field.signatureVRS);
@@ -128,7 +128,7 @@ export async function makeStxTokenTransferFrom(multisigData: MultisigData) {
   const network = "mainnet";
   const anchorMode = StxTx.AnchorMode.Any;
 
-  let unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer({ anchorMode, fee, amount, numSignatures, publicKeys, recipient, nonce, network, memo });
+  const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer({ anchorMode, fee, amount, numSignatures, publicKeys, recipient, nonce, network, memo });
 
   // Set public keys in auth fields
   // TODO: Is this necessary to set auth fields or already done by `makeUnsignedSTXTokenTransfer()`
@@ -190,7 +190,7 @@ export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: Stacks
   }
 
   // Match pubkey in auth fields
-  let numSignatures = 0;
+  const numSignatures = 0;
   const pubkeys = authFields.map(f => {
     if (f.contents.type === StxTx.StacksMessageType.PublicKey) {
       return f.contents.data.toString('hex');
@@ -241,15 +241,15 @@ async function ledgerSignTx(app: StxApp, path: string, partialFields: Transactio
 
   let resp;
   if (prevSigHash) {
-    let txBuffer = unsignedTx.slice();
-    let postSigHashBuffer = Buffer.from(prevSigHash, 'hex');
-    let pkEnc = Buffer.alloc(1, StxTx.PubKeyEncoding.Compressed);
-    let prev_signer_field = partialFields[index - 1];
+    const txBuffer = unsignedTx.slice();
+    const postSigHashBuffer = Buffer.from(prevSigHash, 'hex');
+    const pkEnc = Buffer.alloc(1, StxTx.PubKeyEncoding.Compressed);
+    const prev_signer_field = partialFields[index - 1];
     if (prev_signer_field.contents.type !== StxTx.StacksMessageType.MessageSignature) {
       throw new Error(`Previous sighash was supplied, but previous signer was not included in the transaction's auth fields`);
     }
-    let prev_signer = Buffer.from(prev_signer_field.contents.data, 'hex');
-    let msg_array = [txBuffer, postSigHashBuffer, pkEnc, prev_signer];
+    const prev_signer = Buffer.from(prev_signer_field.contents.data, 'hex');
+    const msg_array = [txBuffer, postSigHashBuffer, pkEnc, prev_signer];
     resp = await app.sign(path, Buffer.concat(msg_array));
   } else {
     resp = await app.sign(path, unsignedTx.slice());
@@ -273,7 +273,7 @@ async function ledgerSignTx(app: StxApp, path: string, partialFields: Transactio
 }
 
 export async function generateMultiSignedTx(): Promise<StacksTransaction> {
-  let privkeys = [
+  const privkeys = [
     'dd7229314db5d50122cd8d4ff8975f57317f54c946cd233d8d35f5b616fe961e01',
     '119a851bd1201b93e6477a0a9c7d29515735530df92ab265166ca3da119f803501',
     '22d45b79bda06915c5d1a98da577089763b6c660304d3919e50797352dc6722f01',
@@ -281,7 +281,7 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
 
   const privKeys = privkeys.map(StxTx.createStacksPrivateKey);
 
-  let pubkeys = [
+  const pubkeys = [
     '03827ffa27ad5af481203d4cf5654cd20312398fa92084ff76e4b4dffddafe1059',
     '03a9d11f6d4102ed323740f95668d6f206c5b5cbc5ce5c7028ceba1736fbbd6861',
     '0205132dbd1270f66adaf43723940a98be6331abe95bfa53838815bf214a5a2150'
@@ -290,7 +290,7 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
   console.log(pubkeys);
   console.log(makeMultiSigAddr(pubkeys, 2));
 
-  let transaction = await StxTx.makeUnsignedSTXTokenTransfer({
+  const transaction = await StxTx.makeUnsignedSTXTokenTransfer({
     fee: new BigNum(300),
     numSignatures: 2,
     publicKeys: pubkeys,
@@ -299,7 +299,7 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
     anchorMode: StxTx.AnchorMode.Any,
   });
 
-  let signer = new StxTx.TransactionSigner(transaction);
+  const signer = new StxTx.TransactionSigner(transaction);
   signer.checkOversign = false;
   signer.appendOrigin(StxTx.pubKeyfromPrivKey(privkeys[0]));
   signer.signOrigin(StxTx.createStacksPrivateKey(privkeys[1]));
@@ -327,7 +327,7 @@ export async function generateMultiUnsignedTx(app: StxApp) {
     anchorMode: StxTx.AnchorMode.Any,
   });
 
-  let partialFields =
+  const partialFields =
     pubkeys.map((x) => {
       return StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, StxTx.createStacksPublicKey(x))
     });
@@ -343,7 +343,7 @@ function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: s
   if (!btcAddr) {
     throw Error(`Failed to construct BTC address from pubkeys`);
   }
-  let c32Addr1 = C32.b58ToC32(btcAddr);
+  const c32Addr1 = C32.b58ToC32(btcAddr);
   if (c32Addr1 == address) {
     return authorizedPKs.map((k) => k.toString('hex'))
   }
@@ -355,7 +355,7 @@ function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: s
   if (!btcAddr) {
     throw Error(`Failed to construct BTC address from pubkeys`);
   }
-  let c32Addr2 = C32.b58ToC32(btcAddr);
+  const c32Addr2 = C32.b58ToC32(btcAddr);
   if (c32Addr2 == address) {
     return authorizedPKs.map((k) => k.toString('hex'))
   }

@@ -46,7 +46,7 @@ export async function sign() {
         const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
         const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
         const info = getAuthFieldInfo(tx);
-        let encoded = base64Serialize(signed_tx);
+        const encoded = base64Serialize(signed_tx);
         displayMessage('tx', `Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): <br/> <br/> ${encoded}`, 'Signed Transaction')
     } catch(e: any) {
         displayMessage('tx', e.toString(), "Error signing transaction");
@@ -71,7 +71,7 @@ export async function generate_transfer() {
         throw new Error(message);
     }
 
-    let multisigData: MultisigData = {
+    const multisigData: MultisigData = {
         tx: {
             fee,
             amount: toSend,
@@ -84,7 +84,7 @@ export async function generate_transfer() {
 
     const tx = await makeStxTokenTransferFrom(multisigData);
 
-    let encoded = base64Serialize(tx);
+    const encoded = base64Serialize(tx);
     displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Unsigned Transaction')
 }
 
