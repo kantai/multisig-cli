@@ -4,7 +4,7 @@ import StxApp from "@zondax/ledger-blockstack";
 import readline from "readline";
 import * as StxTx from "@stacks/transactions";
 
-import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, base64Deserialize, base64Serialize, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr } from "./lib";
+import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, base64Deserialize, base64Serialize, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr, parseNetworkName } from "./lib";
 
 async function readInput(query: string): Promise<string> {
   const rl = readline.createInterface({
@@ -45,15 +45,15 @@ async function main(args: string[]) {
   } else if (args[0] == "create_tx") {
     const fromAddr = await readInput("From Address (C32)");
     const fromPKsHex = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
-    const requiredSigners = parseInt(await readInput("Required signers (number)"));
-    const toAddress = await readInput("To Address (C32)");
-    const toSend = await readInput("microSTX to send");
+    const numSignatures = parseInt(await readInput("Required signers (number)"));
+    const recipient = await readInput("To Address (C32)");
+    const amount = await readInput("microSTX to send");
     const fee = await readInput("microSTX fee");
     const nonce = parseInt(await readInput("Nonce (optional)")) || 0;
-    //const network = (await readInput("Network (testnet/mainnet)")) || "mainnet";
+    const network = parseNetworkName(await readInput("Network (testnet/mainnet)"), 'mainnet');
 
     const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
-    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, requiredSigners);
+    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, numSignatures);
 
     if (generatedMultiSigAddress !== fromAddr) {
         const message = `Public keys, required signers do not match expected address: expected=${fromAddr}, generated=${generatedMultiSigAddress}`;
@@ -64,10 +64,11 @@ async function main(args: string[]) {
     const multisigData: MultisigData = {
         tx: {
             fee,
-            amount: toSend,
-            numSignatures: requiredSigners,
-            recipient: toAddress,
+            amount,
+            numSignatures,
+            recipient,
             nonce,
+            network
         },
         spendingFields,
     };
@@ -101,4 +102,4 @@ async function main(args: string[]) {
 const inputs = process.argv.slice(2);
 
 main(inputs)
-  .then(x => { console.log("") })
+  .then(() => console.log(""))

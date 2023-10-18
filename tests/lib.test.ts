@@ -53,8 +53,9 @@ test('Test transaction building', async () => {
       fee: "300",
       amount: "10000",
       numSignatures: 3,
-      nonce: 4,
       recipient: "ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH",
+      nonce: 4,
+      network: 'mainnet'
     },
     spendingFields: pubkeys.map(x => ({ publicKey: x })),
   };

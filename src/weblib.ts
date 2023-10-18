@@ -1,7 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 export * from './lib';
 
-import { MultisigData, getAuthFieldInfo, base64Deserialize, base64Serialize, makeMultiSigAddr, ledgerSignMultisigTx, makeStxTokenTransferFrom } from './lib';
+import { MultisigData, getAuthFieldInfo, base64Deserialize, base64Serialize, makeMultiSigAddr, ledgerSignMultisigTx, makeStxTokenTransferFrom, parseNetworkName } from './lib';
 import StxApp from "@zondax/ledger-blockstack";
 import LedgerTransportWeb from '@ledgerhq/hw-transport-webhid';
 import BlockstackApp from '@zondax/ledger-blockstack';
@@ -48,7 +48,7 @@ export async function sign() {
         const info = getAuthFieldInfo(tx);
         const encoded = base64Serialize(signed_tx);
         displayMessage('tx', `Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): <br/> <br/> ${encoded}`, 'Signed Transaction')
-    } catch(e: any) {
+    } catch(e) {
         displayMessage('tx', e.toString(), "Error signing transaction");
         throw e;
     }
@@ -57,14 +57,15 @@ export async function sign() {
 export async function generate_transfer() {
     const fromAddr = getInputElement('from-address');
     const fromPKsHex = getInputElement('from-pubkeys').split(',').map(x => x.trim()).sort();
-    const requiredSigners = parseInt(getInputElement('from-n'));
-    const toAddress = getInputElement('to-address');
-    const toSend = getInputElement('stacks-send');
+    const numSignatures = parseInt(getInputElement('from-n'));
+    const recipient = getInputElement('to-address');
+    const amount = getInputElement('stacks-send');
     const fee = getInputElement('stacks-fee');
     const nonce = parseInt(getInputElement('nonce'));
+    const network = parseNetworkName(getInputElement('stacks-network'), 'mainnet');
     const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
 
-    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, requiredSigners);
+    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, numSignatures);
 
     if (generatedMultiSigAddress !== fromAddr) {
         const message = `Public keys, required signers do not match expected address: expected=${fromAddr}, generated=${generatedMultiSigAddress}`;
@@ -75,10 +76,11 @@ export async function generate_transfer() {
     const multisigData: MultisigData = {
         tx: {
             fee,
-            amount: toSend,
-            numSignatures: requiredSigners,
-            recipient: toAddress,
-            nonce
+            amount,
+            numSignatures,
+            recipient,
+            nonce,
+            network
         },
         spendingFields,
     };

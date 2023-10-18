@@ -8,11 +8,12 @@ import { LedgerError } from "@zondax/ledger-blockstack";
 import * as btc from "bitcoinjs-lib";
 import * as C32 from "c32check";
 import { createTransactionAuthField, TransactionAuthField, StacksTransaction } from "@stacks/transactions";
+import * as StxTx from "@stacks/transactions";
+import { StacksNetworkName } from "@stacks/network";
 // import readline from "readline";
 
 import BigNum from "bn.js";
 
-import * as StxTx from "@stacks/transactions";
 
 // This will generate pubkeys using
 //  the format: m/44'/5757'/0'/0/x
@@ -22,6 +23,7 @@ const XPUB_PATH = `m/44'/5757'/0'`;
 //  the format: m/5757'/0'/0/0/x
 const BTC_MULTISIG_SCRIPT_PATH = `m/5757'/0'/0`;
 
+
 export interface MultisigData {
   tx: {
     fee: string,
@@ -29,6 +31,7 @@ export interface MultisigData {
     numSignatures: number,
     recipient: string,
     nonce: number,
+    network: StacksNetworkName,
     memo?: string,
   },
   spendingFields: {
@@ -37,16 +40,17 @@ export interface MultisigData {
   }[],
 }
 
+
 // Need this to serialize BitInt
 (BigInt.prototype as any).toJSON = function() {
   return this.toString()
 }
 
-export function base64Serialize(data: Object): string {
+export function base64Serialize(data: object): string {
   return Buffer.from(JSON.stringify(data)).toString('base64');
 }
 
-export function base64Deserialize(serialized: string): Object {
+export function base64Deserialize(serialized: string): object {
   return JSON.parse(Buffer.from(serialized, 'base64').toString());
 }
 
@@ -63,6 +67,17 @@ export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number
 export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number): Promise<{pubkey: string, path: string}> {
     const path = `${BTC_MULTISIG_SCRIPT_PATH}/0/${index}`;
     return {pubkey: await getPubKey(app, path), path};
+}
+
+// TODO: I don't know if something like this is already in Stacks.js (I couldn't find it), but it should be
+export function parseNetworkName(input: string, defaultNetwork: StacksNetworkName): StacksNetworkName {
+  const allowedNames: StacksNetworkName[] = ['mainnet', 'testnet'];
+  for (const n of allowedNames) {
+    if (input.toLowerCase().includes(n)) {
+      return n;
+    }
+  }
+  return defaultNetwork;
 }
 
 export async function generateMultiSigAddr(app: StxApp) {
@@ -125,7 +140,7 @@ export async function makeStxTokenTransferFrom(multisigData: MultisigData) {
   const publicKeys = multisigData.spendingFields.slice().map(field => field.publicKey);
   const memo = multisigData.tx.memo;
   const recipient = multisigData.tx.recipient;
-  const network = "mainnet";
+  const network = multisigData.tx.network;
   const anchorMode = StxTx.AnchorMode.Any;
 
   const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer({ anchorMode, fee, amount, numSignatures, publicKeys, recipient, nonce, network, memo });
@@ -190,7 +205,6 @@ export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: Stacks
   }
 
   // Match pubkey in auth fields
-  const numSignatures = 0;
   const pubkeys = authFields.map(f => {
     if (f.contents.type === StxTx.StacksMessageType.PublicKey) {
       return f.contents.data.toString('hex');
