@@ -61,6 +61,7 @@ export async function generate_transfer() {
     const toAddress = getInputElement('to-address');
     const toSend = getInputElement('stacks-send');
     const fee = getInputElement('stacks-fee');
+    const nonce = parseInt(getInputElement('nonce'));
     const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
 
     const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, requiredSigners);
@@ -77,7 +78,7 @@ export async function generate_transfer() {
             amount: toSend,
             numSignatures: requiredSigners,
             recipient: toAddress,
-            nonce: 0, // TODO: Allow input for this
+            nonce
         },
         spendingFields,
     };
