@@ -55,3 +55,8 @@ You will need the multisig address and pubkeys that were used in the previous se
    ```sh
    npm start -- decode
    ```
+
+3. Broadcast transaction
+   ```sh
+   npm start -- broadcast
+   ```

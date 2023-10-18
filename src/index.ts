@@ -87,6 +87,12 @@ async function main(args: string[]) {
     const info = getAuthFieldInfo(tx);
     const encoded = base64Serialize(signed_tx);
     console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): ${encoded}`)
+  } else if (args[0] == "broadcast") {
+    const inputPayload = await readInput("Signed transaction input (base64)");
+    const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
+    const res = await StxTx.broadcastTransaction(tx);
+
+    console.dir(res, {depth: null, colors: true});
   }
 
   await transport.close();
