@@ -89,3 +89,10 @@ export async function generate_transfer() {
     displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Unsigned Transaction')
 }
 
+export async function broadcastTransaction() {
+    const tx = getInputElement('broadcast-input');
+    const decodedTx = base64Deserialize(tx) as StxTx.StacksTransaction;;
+    const res = await StxTx.broadcastTransaction(decodedTx);
+    displayMessage('tx', JSON.stringify(res, null, 2), 'Broadcast Transaction')
+}
+

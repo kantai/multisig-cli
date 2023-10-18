@@ -15,7 +15,7 @@
     "webpack-cli": "^4.10.0"
   },
   "scripts": {
-    "webpack": "rm -rf ./dist && webpack",
+    "webpack": "webpack",
     "cli": "ts-node ./src/index.ts",
     "lint": "eslint .",
     "lint-fix": "eslint --fix .",
