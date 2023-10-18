@@ -1,20 +1,10 @@
 
-import SpecTransport from "@ledgerhq/hw-transport-node-speculos";
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
-
 import StxApp from "@zondax/ledger-blockstack";
-import { LedgerError } from "@zondax/ledger-blockstack";
-
-import * as btc from "bitcoinjs-lib";
-import * as C32 from "c32check";
-import { AddressVersion, TransactionAuthField, UnsignedMultiSigTokenTransferOptions } from "@stacks/transactions";
 import readline from "readline";
-
-import BigNum from "bn.js";
-
 import * as StxTx from "@stacks/transactions";
 
-import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, base64Deserialize, base64Serialize, ledgerSignMultisigTx, getPubKey, getPubKeyMultisigStandardIndex, getPubKeySingleSigStandardIndex, getAuthFieldInfo, generateMultiSigAddr } from "./lib";
+import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, base64Deserialize, base64Serialize, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr } from "./lib";
 
 async function readInput(query: string): Promise<string> {
   const rl = readline.createInterface({

@@ -7,7 +7,7 @@ import { LedgerError } from "@zondax/ledger-blockstack";
 
 import * as btc from "bitcoinjs-lib";
 import * as C32 from "c32check";
-import { AddressVersion, createTransactionAuthField, TransactionAuthField, UnsignedMultiSigTokenTransferOptions, StacksTransaction } from "@stacks/transactions";
+import { createTransactionAuthField, TransactionAuthField, StacksTransaction } from "@stacks/transactions";
 // import readline from "readline";
 
 import BigNum from "bn.js";
