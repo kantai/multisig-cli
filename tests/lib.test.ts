@@ -10,12 +10,19 @@ test('vitest running', () => {
 
 test('Base64 encode/decode', async () => {
   const tx = await lib.generateMultiSignedTx();
-  // Stringify and parse to fix BigInt formatting
-  // Not sure why this works
-  const tx_expected = JSON.parse(JSON.stringify(tx));
-  const tx_encoded = lib.base64Serialize(tx);
-  const tx_decoded = lib.base64Deserialize(tx_encoded);
-  expect(tx_decoded).toEqual(tx_expected);
+  const tx_encoded = lib.txEncode(tx);
+  const tx_decoded = lib.txDecode(tx_encoded);
+
+  // In both objects `memo` is empty string but vitest does not consider them equal
+  delete tx.payload['memo'].content;
+  delete tx_decoded.payload['memo'].content;
+
+  expect(tx_decoded).toEqual(tx);
+
+  // Check object methods
+  expect(tx_decoded.serialize).toBeDefined();
+  expect(tx_decoded.txid).toBeDefined();
+  expect(tx_decoded.verifyOrigin).toBeDefined();
 })
 
 test('Multisig address generation', () => {
@@ -28,7 +35,7 @@ test('Multisig address generation', () => {
   // This Hash160 encodes as SM2R12RQCV9SCAZPM37VSCVP4X3EQK1Y70KCV7EDE
   //const c32_expected = "SM2R12RQCV9SCAZPM37VSCVP4X3EQK1Y70KCV7EDE";
   const c32_expected = C32.c32address(StxTx.AddressVersion.MainnetMultiSig, "b01162ecda72c57ed419f7966ec4e8dd7987c704");
-  expect(c32_address).toBe(c32_expected);
+  expect(c32_address).toEqual(c32_expected);
 })
 
 test('Get auth field info', async () => {
@@ -75,15 +82,15 @@ test('Test transaction building', async () => {
 
   it('Should have correct pubkeys', () => {
     spendingCondition.fields.forEach((f, i) => {
-      expect(f.contents.type).toBe(StxTx.StacksMessageType.PublicKey)
+      expect(f.contents.type).toEqual(StxTx.StacksMessageType.PublicKey)
       const pubkey = f.contents.data.toString('hex');
-      expect(pubkey).toBe(pubkeys[i])
+      expect(pubkey).toEqual(pubkeys[i])
     });
   });
 
   it('Should have correct fee, nonce, and hash mode', () => {
-    expect(spendingCondition.fee).toBe(300)
-    expect(spendingCondition.nonce).toBe(4)
-    expect(spendingCondition.hashMode).toBe(StxTx.AddressHashMode.SerializeP2SH)
+    expect(spendingCondition.fee).toEqual(300)
+    expect(spendingCondition.nonce).toEqual(4)
+    expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH)
   });
 })

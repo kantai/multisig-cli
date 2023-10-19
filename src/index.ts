@@ -4,7 +4,7 @@ import StxApp from "@zondax/ledger-blockstack";
 import readline from "readline";
 import * as StxTx from "@stacks/transactions";
 
-import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, base64Deserialize, base64Serialize, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr, parseNetworkName } from "./lib";
+import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, txDecode, txEncode, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr, parseNetworkName } from "./lib";
 
 async function readInput(query: string): Promise<string> {
   const rl = readline.createInterface({
@@ -36,7 +36,7 @@ async function main(args: string[]) {
   } else if (args[0] == "decode") {
     // Decode and print transaction
     const inputPayload = await readInput("Transaction input (base64)");
-    const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
+    const tx = txDecode(inputPayload) as StxTx.StacksTransaction;
     console.dir(tx, {depth: null, colors: true})
   } else if (args[0] == "make_multi") {
     const app = new StxApp(transport);
@@ -75,22 +75,22 @@ async function main(args: string[]) {
 
     const tx = await makeStxTokenTransferFrom(multisigData);
 
-    const encoded = base64Serialize(tx);
+    const encoded = txEncode(tx);
     console.log(`Unsigned multisig transaction: ${encoded}`)
   } else if (args[0] == "sign") {
     const app = new StxApp(transport);
     const inputPayload = await readInput("Unsigned or partially signed transaction input (base64)");
     const hdPath = await readInput("Signer path (HD derivation path)");
 
-    const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
+    const tx = txDecode(inputPayload) as StxTx.StacksTransaction;
     console.log("    *** Please check and approve signing on Ledger ***");
     const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
     const info = getAuthFieldInfo(tx);
-    const encoded = base64Serialize(signed_tx);
+    const encoded = txEncode(signed_tx);
     console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): ${encoded}`)
   } else if (args[0] == "broadcast") {
     const inputPayload = await readInput("Signed transaction input (base64)");
-    const tx = base64Deserialize(inputPayload) as StxTx.StacksTransaction;
+    const tx = txDecode(inputPayload) as StxTx.StacksTransaction;
     const res = await StxTx.broadcastTransaction(tx);
 
     console.dir(res, {depth: null, colors: true});

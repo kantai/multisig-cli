@@ -46,11 +46,23 @@ export interface MultisigData {
   return this.toString()
 }
 
-export function base64Serialize(data: object): string {
+// Export `StacksTransaction` as base64-encoded string
+export function txEncode(tx: StacksTransaction): string {
+  return tx.serialize().toString('base64');
+}
+
+// Import `StacksTransaction` from base64-encoded string
+export function txDecode(b64: string): StacksTransaction {
+  return StxTx.deserializeTransaction(Buffer.from(b64, 'base64'));
+}
+
+// Export an object as base64-encoded string
+export function b64Encode(data: object): string {
   return Buffer.from(JSON.stringify(data)).toString('base64');
 }
 
-export function base64Deserialize(serialized: string): object {
+// Import an object from base64-encoded string
+export function b64Decode(serialized: string): object {
   return JSON.parse(Buffer.from(serialized, 'base64').toString());
 }
 
