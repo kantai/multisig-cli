@@ -1,10 +1,9 @@
-
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
 import StxApp from "@zondax/ledger-blockstack";
 import readline from "readline";
 import * as StxTx from "@stacks/transactions";
 
-import { MultisigTxInput, makeMultiSigAddr, makeStxTokenTransferFrom, txDecode, txEncode, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr } from "./lib";
+import { MultisigTxInput, makeMultiSigAddr, makeStxTokenTransferFrom, txDecode, txEncode, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr, createTxsFromFile } from "./lib";
 //import * as lib from "./lib";
 
 async function readInput(query: string): Promise<string> {
@@ -22,29 +21,47 @@ async function readInput(query: string): Promise<string> {
   return answer.trim();
 }
 
-async function main(args: string[]) {
-  //let transport = await SpecTransport.open({ apduPort: 40000 });
-  const transport = await TransportNodeHid.create();
+async function getTransport() {
+  //return await SpecTransport.open({ apduPort: 40000 });
+  return await TransportNodeHid.create();
+}
 
-  if (args[0] == "get_pub") {
-    const app = new StxApp(transport);
-    const path = args[1];
-    if (!path) {
-      throw new Error("Must supply path as second argument");
-    }
-    const pubkey = await getPubKey(app, path);
-    console.log(`Pub: ${pubkey} @ ${path}`);
-  } else if (args[0] == "decode") {
-    // Decode and print transaction
-    const inputPayload = await readInput("Transaction input (base64)");
-    const tx = txDecode(inputPayload);
-    //const tx = await lib.generateMultiSignedTx();
-    console.dir(tx, {depth: null, colors: true})
-  } else if (args[0] == "make_multi") {
-    const app = new StxApp(transport);
-    const addr = await generateMultiSigAddr(app);
-    console.log(`Addr: ${addr}`);
-  } else if (args[0] == "create_tx") {
+//=================
+// Subcommands
+//=================
+
+async function subcommand_get_pub(args: string[], transport: object) {
+  const app = new StxApp(transport);
+  const path = args[0];
+  if (!path) {
+    throw new Error("Must supply path as second argument");
+  }
+  const pubkey = await getPubKey(app, path);
+  console.log(`Pub: ${pubkey} @ ${path}`);
+}
+
+async function subcommand_decode(args: string[]) {
+  // Decode and print transaction
+  const inputPayload = await readInput("Transaction input (base64)");
+  const tx = txDecode(inputPayload);
+  //const tx = await lib.generateMultiSignedTx();
+  console.dir(tx, {depth: null, colors: true})
+}
+
+async function subcommand_make_multi(args: string[], transport: object) {
+  const app = new StxApp(transport);
+  const addr = await generateMultiSigAddr(app);
+  console.log(`Addr: ${addr}`);
+}
+
+async function subcommand_create_tx(args: string[]) {
+  if (args[0] === '--file') {
+    const txs = await createTxsFromFile(args[1]);
+    const txs_encoded = txs.map(tx => txEncode(tx));
+    console.log(`Unsigned multisig transactions`);
+    console.log(`------------------------------`);
+    console.log(txs_encoded);
+  } else {
     const fromAddr = await readInput("From Address (C32)");
     const fromPKsHex = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
     const reqSignatures = parseInt(await readInput("Required signers (number)"));
@@ -76,32 +93,78 @@ async function main(args: string[]) {
     };
 
     const tx = await makeStxTokenTransferFrom(multisigData);
-
     const encoded = txEncode(tx);
-    console.log(`Unsigned multisig transaction: ${encoded}`)
-  } else if (args[0] == "sign") {
-    const app = new StxApp(transport);
-    const inputPayload = await readInput("Unsigned or partially signed transaction input (base64)");
-    const hdPath = await readInput("Signer path (HD derivation path)");
-
-    const tx = txDecode(inputPayload);
-    console.log("    *** Please check and approve signing on Ledger ***");
-    const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
-    const info = getAuthFieldInfo(tx);
-    const encoded = txEncode(signed_tx);
-    console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): ${encoded}`)
-  } else if (args[0] == "broadcast") {
-    const inputPayload = await readInput("Signed transaction input (base64)");
-    const tx = txDecode(inputPayload);
-    const res = await StxTx.broadcastTransaction(tx);
-
-    console.dir(res, {depth: null, colors: true});
+    console.log(`Unsigned multisig transaction`);
+    console.log(`-----------------------------`);
+    console.log(encoded);
   }
-
-  await transport.close();
 }
 
-const inputs = process.argv.slice(2);
+async function subcommand_sign(args: string[], transport: object) {
+  const app = new StxApp(transport);
+  const inputPayload = await readInput("Unsigned or partially signed transaction input (base64)");
+  const hdPath = await readInput("Signer path (HD derivation path)");
 
-main(inputs)
-  .then(() => console.log(""))
+  const tx = txDecode(inputPayload);
+  console.log("    *** Please check and approve signing on Ledger ***");
+  const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
+  const info = getAuthFieldInfo(tx);
+  const encoded = txEncode(signed_tx);
+  console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): ${encoded}`)
+}
+
+async function subcommand_broadcast(args: string[]) {
+  const inputPayload = await readInput("Signed transaction input (base64)");
+  const tx = txDecode(inputPayload);
+  const res = await StxTx.broadcastTransaction(tx);
+
+  console.dir(res, {depth: null, colors: true});
+}
+
+function subcommand_help() {
+  // TODO
+  console.log("Invalid subcommand")
+}
+
+//=================
+// main()
+//=================
+
+async function main(args: string[]) {
+  let transport = null;
+  const subcommand = args.shift();
+
+  switch (subcommand) {
+    case 'get_pub':
+      transport = await getTransport();
+      await subcommand_get_pub(args, transport);
+      break;
+    case 'decode':
+      await subcommand_decode(args);
+      break;
+    case 'make_multi':
+      transport = await getTransport();
+      await subcommand_make_multi(args, transport);
+      break;
+    case 'create_tx':
+      await subcommand_create_tx(args);
+      break;
+    case 'sign':
+      transport = await getTransport();
+      await subcommand_sign(args, transport);
+      break;
+    case 'broadcast':
+      await subcommand_broadcast(args);
+      break;
+    case 'help':
+    case '-h':
+    case '--help':
+    default:
+      subcommand_help();
+      break;
+  }
+
+  await transport?.close();
+}
+
+main(process.argv.slice(2))
