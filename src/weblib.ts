@@ -1,7 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 export * from './lib';
 
-import { MultisigData, getAuthFieldInfo, txDecode, txEncode, makeMultiSigAddr, ledgerSignMultisigTx, makeStxTokenTransferFrom, parseNetworkName } from './lib';
+import { MultisigTxInput, getAuthFieldInfo, txDecode, txEncode, makeMultiSigAddr, ledgerSignMultisigTx, makeStxTokenTransferFrom } from './lib';
 import StxApp from "@zondax/ledger-blockstack";
 import LedgerTransportWeb from '@ledgerhq/hw-transport-webhid';
 import BlockstackApp from '@zondax/ledger-blockstack';
@@ -57,15 +57,15 @@ export async function sign() {
 export async function generate_transfer() {
     const fromAddr = getInputElement('from-address');
     const fromPKsHex = getInputElement('from-pubkeys').split(',').map(x => x.trim()).sort();
-    const numSignatures = parseInt(getInputElement('from-n'));
+    const reqSignatures = parseInt(getInputElement('from-n'));
     const recipient = getInputElement('to-address');
     const amount = getInputElement('stacks-send');
     const fee = getInputElement('stacks-fee');
-    const nonce = parseInt(getInputElement('nonce'));
-    const network = parseNetworkName(getInputElement('stacks-network'), 'mainnet');
+    const nonce = getInputElement('nonce');
+    const network = getInputElement('stacks-network');
     const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
 
-    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, numSignatures);
+    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, reqSignatures);
 
     if (generatedMultiSigAddress !== fromAddr) {
         const message = `Public keys, required signers do not match expected address: expected=${fromAddr}, generated=${generatedMultiSigAddress}`;
@@ -73,11 +73,11 @@ export async function generate_transfer() {
         throw new Error(message);
     }
 
-    const multisigData: MultisigData = {
+    const multisigData: MultisigTxInput = {
         tx: {
             fee,
             amount,
-            numSignatures,
+            reqSignatures,
             recipient,
             nonce,
             network

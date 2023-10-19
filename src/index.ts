@@ -4,7 +4,7 @@ import StxApp from "@zondax/ledger-blockstack";
 import readline from "readline";
 import * as StxTx from "@stacks/transactions";
 
-import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, txDecode, txEncode, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr, parseNetworkName } from "./lib";
+import { MultisigTxInput, makeMultiSigAddr, makeStxTokenTransferFrom, txDecode, txEncode, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr } from "./lib";
 //import * as lib from "./lib";
 
 async function readInput(query: string): Promise<string> {
@@ -47,15 +47,15 @@ async function main(args: string[]) {
   } else if (args[0] == "create_tx") {
     const fromAddr = await readInput("From Address (C32)");
     const fromPKsHex = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
-    const numSignatures = parseInt(await readInput("Required signers (number)"));
+    const reqSignatures = parseInt(await readInput("Required signers (number)"));
     const recipient = await readInput("To Address (C32)");
     const amount = await readInput("microSTX to send");
     const fee = await readInput("microSTX fee");
-    const nonce = parseInt(await readInput("Nonce (optional)")) || 0;
-    const network = parseNetworkName(await readInput("Network (testnet/mainnet)"), 'mainnet');
+    const nonce = await readInput("Nonce (optional)");
+    const network = await readInput("Network (optional) [testnet/mainnet]");
 
     const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
-    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, numSignatures);
+    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, reqSignatures);
 
     if (generatedMultiSigAddress !== fromAddr) {
         const message = `Public keys, required signers do not match expected address: expected=${fromAddr}, generated=${generatedMultiSigAddress}`;
@@ -63,11 +63,11 @@ async function main(args: string[]) {
     }
 
     // Contains tx + metadata
-    const multisigData: MultisigData = {
+    const multisigData: MultisigTxInput = {
         tx: {
             fee,
             amount,
-            numSignatures,
+            reqSignatures,
             recipient,
             nonce,
             network

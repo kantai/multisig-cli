@@ -78,11 +78,11 @@ test('Test transaction building', async () => {
     "03ce61f1d155738a5e434fc8a61c3e104f891d1ec71576e8ad85abb68b34670d35", // 2
     "03ef2340518b5867b23598a9cf74611f8b98064f7d55cdb8c107c67b5efcbc5c77", // 3
   ];
-  const data: lib.MultisigData = {
+  const data: lib.MultisigTxInput = {
     tx: {
       fee: "300",
       amount: "10000",
-      numSignatures: 3,
+      reqSignatures: 3,
       recipient: "ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH",
       nonce: 4,
       network: 'mainnet'

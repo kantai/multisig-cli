@@ -23,15 +23,14 @@ const XPUB_PATH = `m/44'/5757'/0'`;
 //  the format: m/5757'/0'/0/0/x
 const BTC_MULTISIG_SCRIPT_PATH = `m/5757'/0'/0`;
 
-
-export interface MultisigData {
+export interface MultisigTxInput {
   tx: {
     fee: string,
     amount: string,
-    numSignatures: number,
+    reqSignatures: number,
     recipient: string,
-    nonce: number,
-    network: StacksNetworkName,
+    nonce?: string,
+    network?: string,
     memo?: string,
   },
   spendingFields: {
@@ -39,7 +38,6 @@ export interface MultisigData {
     signatureVRS?: string,
   }[],
 }
-
 
 // Need this to serialize BitInt
 (BigInt.prototype as any).toJSON = function() {
@@ -82,14 +80,14 @@ export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number)
 }
 
 // TODO: I don't know if something like this is already in Stacks.js (I couldn't find it), but it should be
-export function parseNetworkName(input: string, defaultNetwork: StacksNetworkName): StacksNetworkName {
+export function parseNetworkName(input: string): StacksNetworkName | null {
   const allowedNames: StacksNetworkName[] = ['mainnet', 'testnet'];
   for (const n of allowedNames) {
     if (input.toLowerCase().includes(n)) {
       return n;
     }
   }
-  return defaultNetwork;
+  return null;
 }
 
 export async function generateMultiSigAddr(app: StxApp) {
@@ -116,7 +114,7 @@ export function makeMultiSigAddr(pubkeys: string[], required: number): string {
 }
   
 /// Builds spending condition fields out of a multisig data serialization
-function makeSpendingConditionFields(multisigData: MultisigData): TransactionAuthField[] {
+function makeSpendingConditionFields(multisigData: MultisigTxInput): TransactionAuthField[] {
   const fields = multisigData.spendingFields
       .map((field) => {
         if (field.signatureVRS) {
@@ -144,22 +142,34 @@ function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fi
 }
 
 /// Builds an unsigned transfer out of a multisig data serialization
-export async function makeStxTokenTransferFrom(multisigData: MultisigData) {
-  const fee = new BigNum(multisigData.tx.fee, 10);
-  const amount = new BigNum(multisigData.tx.amount, 10);
-  const nonce = new BigNum(multisigData.tx.nonce, 10);
-  const numSignatures = multisigData.tx.numSignatures;
-  const publicKeys = multisigData.spendingFields.slice().map(field => field.publicKey);
-  const memo = multisigData.tx.memo;
-  const recipient = multisigData.tx.recipient;
-  const network = multisigData.tx.network;
+export async function makeStxTokenTransferFrom(input: MultisigTxInput) {
+  const fee = new BigNum(input.tx.fee, 10);
+  const amount = new BigNum(input.tx.amount, 10);
+  const numSignatures = input.tx.reqSignatures;
+  const publicKeys = input.spendingFields.slice().map(field => field.publicKey);
+  const memo = input.tx.memo;
+  const recipient = input.tx.recipient;
   const anchorMode = StxTx.AnchorMode.Any;
 
-  const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer({ anchorMode, fee, amount, numSignatures, publicKeys, recipient, nonce, network, memo });
+  const options: StxTx.UnsignedMultiSigTokenTransferOptions = { anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo };
+
+  // Conditional fields
+  if (input.tx.network) {
+    const network = parseNetworkName(input.tx.network);
+    if (network) {
+      options.network = network;
+    }
+  }
+
+  if (input.tx.nonce) {
+    options.nonce = new BigNum(input.tx.nonce, 10);
+  }
+
+  const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer(options);
 
   // Set public keys in auth fields
   // TODO: Is this necessary to set auth fields or already done by `makeUnsignedSTXTokenTransfer()`
-  const authFields = makeSpendingConditionFields(multisigData);
+  const authFields = makeSpendingConditionFields(input);
   setMultisigTransactionSpendingConditionFields(unsignedTx, authFields);
 
   return unsignedTx
@@ -305,7 +315,7 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
     '22d45b79bda06915c5d1a98da577089763b6c660304d3919e50797352dc6722f01',
   ]
 
-  const privKeys = privkeys.map(StxTx.createStacksPrivateKey);
+  //const privKeys = privkeys.map(StxTx.createStacksPrivateKey);
 
   const pubkeys = [
     '03827ffa27ad5af481203d4cf5654cd20312398fa92084ff76e4b4dffddafe1059',
