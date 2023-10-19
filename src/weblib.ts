@@ -92,9 +92,14 @@ export async function generate_transfer() {
 }
 
 export async function broadcastTransaction() {
-    const tx = getInputElement('broadcast-input');
-    const decodedTx = txDecode(tx);
-    const res = await StxTx.broadcastTransaction(decodedTx);
+    const encodedTx = getInputElement('broadcast-input');
+    const tx = txDecode(encodedTx);
+    const res = await StxTx.broadcastTransaction(tx);
     displayMessage('tx', JSON.stringify(res, null, 2), 'Broadcast Transaction')
 }
 
+export async function checkDecode() {
+    const encodedTx = getInputElement('check-decode-input');
+    const tx = txDecode(encodedTx);
+    displayMessage('tx', JSON.stringify(tx, null, 2), 'Decoded Transaction')
+}
