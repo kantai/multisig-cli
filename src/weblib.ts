@@ -43,12 +43,12 @@ export async function sign() {
         const inputPayload = getInputElement('transact-input');
         const hdPath = getInputElement('transact-path');
 
-        const tx = txDecode(inputPayload) as StxTx.StacksTransaction;
+        const tx = txDecode(inputPayload);
         const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
         const info = getAuthFieldInfo(tx);
         const encoded = txEncode(signed_tx);
         displayMessage('tx', `Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): <br/> <br/> ${encoded}`, 'Signed Transaction')
-    } catch(e) {
+    } catch(e: any) {
         displayMessage('tx', e.toString(), "Error signing transaction");
         throw e;
     }
@@ -89,5 +89,12 @@ export async function generate_transfer() {
 
     const encoded = txEncode(tx);
     displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Unsigned Transaction')
+}
+
+export async function broadcastTransaction() {
+    const tx = getInputElement('broadcast-input');
+    const decodedTx = txDecode(tx);
+    const res = await StxTx.broadcastTransaction(decodedTx);
+    displayMessage('tx', JSON.stringify(res, null, 2), 'Broadcast Transaction')
 }
 

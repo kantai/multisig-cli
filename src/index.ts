@@ -5,6 +5,7 @@ import readline from "readline";
 import * as StxTx from "@stacks/transactions";
 
 import { MultisigData, makeMultiSigAddr, makeStxTokenTransferFrom, txDecode, txEncode, ledgerSignMultisigTx, getPubKey, getAuthFieldInfo, generateMultiSigAddr, parseNetworkName } from "./lib";
+//import * as lib from "./lib";
 
 async function readInput(query: string): Promise<string> {
   const rl = readline.createInterface({
@@ -36,7 +37,8 @@ async function main(args: string[]) {
   } else if (args[0] == "decode") {
     // Decode and print transaction
     const inputPayload = await readInput("Transaction input (base64)");
-    const tx = txDecode(inputPayload) as StxTx.StacksTransaction;
+    const tx = txDecode(inputPayload);
+    //const tx = await lib.generateMultiSignedTx();
     console.dir(tx, {depth: null, colors: true})
   } else if (args[0] == "make_multi") {
     const app = new StxApp(transport);
@@ -82,7 +84,7 @@ async function main(args: string[]) {
     const inputPayload = await readInput("Unsigned or partially signed transaction input (base64)");
     const hdPath = await readInput("Signer path (HD derivation path)");
 
-    const tx = txDecode(inputPayload) as StxTx.StacksTransaction;
+    const tx = txDecode(inputPayload);
     console.log("    *** Please check and approve signing on Ledger ***");
     const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
     const info = getAuthFieldInfo(tx);
@@ -90,7 +92,7 @@ async function main(args: string[]) {
     console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): ${encoded}`)
   } else if (args[0] == "broadcast") {
     const inputPayload = await readInput("Signed transaction input (base64)");
-    const tx = txDecode(inputPayload) as StxTx.StacksTransaction;
+    const tx = txDecode(inputPayload);
     const res = await StxTx.broadcastTransaction(tx);
 
     console.dir(res, {depth: null, colors: true});

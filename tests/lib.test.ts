@@ -8,12 +8,35 @@ test('vitest running', () => {
   expect(true).toBe(true)
 })
 
-test('Base64 encode/decode', async () => {
+test('StacksTransaction serialize/deserialize', async () => {
+  const tx = await lib.generateMultiSignedTx();
+  const tx_encoded = tx.serialize();
+  const tx_decoded = StxTx.deserializeTransaction(tx_encoded);
+
+  // FIXME: When transaction is deserialized, there are a bunch of null bytes in `memo.content`:
+  //   content: '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+  // It should be:
+  //   content: ''
+  delete tx.payload['memo'].content;
+  delete tx_decoded.payload['memo'].content;
+
+  expect(tx_decoded).toEqual(tx);
+
+  // Check object methods
+  expect(tx_decoded.serialize).toBeDefined();
+  expect(tx_decoded.txid).toBeDefined();
+  expect(tx_decoded.verifyOrigin).toBeDefined();
+})
+
+test('StacksTransaction encode/decode', async () => {
   const tx = await lib.generateMultiSignedTx();
   const tx_encoded = lib.txEncode(tx);
   const tx_decoded = lib.txDecode(tx_encoded);
 
-  // In both objects `memo` is empty string but vitest does not consider them equal
+  // FIXME: When transaction is deserialized, there are a bunch of null bytes in `memo.content`:
+  //   content: '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+  // It should be:
+  //   content: ''
   delete tx.payload['memo'].content;
   delete tx_decoded.payload['memo'].content;
 
