@@ -101,5 +101,5 @@ export async function broadcastTransaction() {
 export async function checkDecode() {
     const encodedTx = getInputElement('check-decode-input');
     const tx = txDecode(encodedTx);
-    displayMessage('tx', JSON.stringify(tx, null, 2), 'Decoded Transaction')
+    displayMessage('tx', `<pre><code>${JSON.stringify(tx, null, 2)}</code></pre>`, 'Decoded Transaction')
 }
