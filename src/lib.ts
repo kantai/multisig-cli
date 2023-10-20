@@ -24,19 +24,15 @@ const XPUB_PATH = `m/44'/5757'/0'`;
 const BTC_MULTISIG_SCRIPT_PATH = `m/5757'/0'/0`;
 
 export interface MultisigTxInput {
-  tx: {
-    fee: string,
-    amount: string,
-    reqSignatures: number,
-    recipient: string,
-    nonce?: string,
-    network?: string,
-    memo?: string,
-  },
-  spendingFields: {
-    publicKey: string,
-    signatureVRS?: string,
-  }[],
+  sender?: string,  // Optional. Can be used to check address generation from pubkeys
+  recipient: string,
+  fee: string,
+  amount: string,
+  signers: string[],
+  reqSignatures: number,
+  nonce?: string,
+  network?: string,
+  memo?: string,
 }
 
 // Export `StacksTransaction` as base64-encoded string
@@ -59,9 +55,20 @@ export function b64Decode(serialized: string): object {
   return JSON.parse(Buffer.from(serialized, 'base64').toString());
 }
 
+// TODO: I don't know if something like this is already in Stacks.js (I couldn't find it), but it should be
+export function parseNetworkName(input: string | undefined): StacksNetworkName | undefined {
+  const allowedNames: StacksNetworkName[] = ['mainnet', 'testnet'];
+  for (const n of allowedNames) {
+    if (input?.toLowerCase().includes(n)) {
+      return n;
+    }
+  }
+  return undefined;
+}
+
 export async function getPubKey(app: StxApp, path: string): Promise<string> {
-    const amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
-    return amt.publicKey.toString('hex')
+  const amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
+  return amt.publicKey.toString('hex')
 }  
 
 export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number): Promise<string> {
@@ -69,45 +76,9 @@ export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number
   return getPubKey(app, path);
 }
 
-export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number): Promise<{pubkey: string, path: string}> {
-    const path = `${BTC_MULTISIG_SCRIPT_PATH}/0/${index}`;
-    return {pubkey: await getPubKey(app, path), path};
-}
-
-// Create transactions from file path
-export async function createTxsFromFile(file: string): Promise<StacksTransaction[]> {
-  const data = await fs.readFile(file, { encoding: 'utf8' });
-  return await createTxsFromString(data);
-}
-
-// Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
-export async function createTxsFromString(str: string): Promise<StacksTransaction[]> {
-  const json = JSON.parse(str) as MultisigTxInput[];
-  if (!Array.isArray(json)) {
-    throw Error('Expected array')
-  }
-  return await createTxsFromInputs(json);
-}
-
-// Create transactions from `MultisigTxInput[]`
-export async function createTxsFromInputs(inputs: MultisigTxInput[]): Promise<StacksTransaction[]> {
-  // Use Promise.all to process inputs in parallel
-  const txs = await Promise.all(
-     inputs.map(async (input) => await makeStxTokenTransferFrom(input) )
-  );
-
-  return txs;
-}
-
-// TODO: I don't know if something like this is already in Stacks.js (I couldn't find it), but it should be
-export function parseNetworkName(input: string): StacksNetworkName | null {
-  const allowedNames: StacksNetworkName[] = ['mainnet', 'testnet'];
-  for (const n of allowedNames) {
-    if (input.toLowerCase().includes(n)) {
-      return n;
-    }
-  }
-  return null;
+export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number): Promise<{ pubkey: string, path: string }> {
+  const path = `${BTC_MULTISIG_SCRIPT_PATH}/0/${index}`;
+  return { pubkey: await getPubKey(app, path), path };
 }
 
 export async function generateMultiSigAddr(app: StxApp) {
@@ -133,22 +104,11 @@ export function makeMultiSigAddr(pubkeys: string[], required: number): string {
   return c32Addr
 }
   
-/// Builds spending condition fields out of a multisig data serialization
-function makeSpendingConditionFields(multisigData: MultisigTxInput): TransactionAuthField[] {
-  const fields = multisigData.spendingFields
-      .map((field) => {
-        if (field.signatureVRS) {
-          return StxTx.createMessageSignature(field.signatureVRS);
-        } else if (field.publicKey) {
-          return StxTx.createStacksPublicKey(field.publicKey);
-        } else {
-          throw "spendingField in the multisig object did not have publicKey specification"
-        }
-      })
-      .map((x) => {
-        return StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, x);
-      })
-  return fields
+/// Builds spending condition fields out of an array of public key hex strings
+function makeSpendingConditionFields(keys: string[]): TransactionAuthField[] {
+  return keys
+    .map(str => StxTx.createStacksPublicKey(str))
+    .map(key => StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, key))
 }
 
 function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fields: TransactionAuthField[]) {
@@ -161,35 +121,64 @@ function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fi
   tx.auth.spendingCondition.fields = fields;
 }
 
+// Create transactions from file path
+export async function makeTxsFromFile(file: string): Promise<StacksTransaction[]> {
+  const data = await fs.readFile(file, { encoding: 'utf8' });
+  return await makeTxsFromString(data);
+}
+
+// Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
+export async function makeTxsFromString(str: string): Promise<StacksTransaction[]> {
+  const json = JSON.parse(str) as MultisigTxInput[];
+  if (!Array.isArray(json)) {
+    throw Error('Expected array')
+  }
+  return await makeTxsFromInputs(json);
+}
+
+// Create transactions from `MultisigTxInput[]`
+export async function makeTxsFromInputs(inputs: MultisigTxInput[]): Promise<StacksTransaction[]> {
+  // Use Promise.all to process inputs in parallel
+  const txs = await Promise.all(
+     inputs.map(async (input) => await makeStxTokenTransferFrom(input) )
+  );
+
+  return txs;
+}
+
 /// Builds an unsigned transfer out of a multisig data serialization
 export async function makeStxTokenTransferFrom(input: MultisigTxInput): Promise<StacksTransaction> {
-  const fee = new BigNum(input.tx.fee, 10);
-  const amount = new BigNum(input.tx.amount, 10);
-  const numSignatures = input.tx.reqSignatures;
-  const publicKeys = input.spendingFields.slice().map(field => field.publicKey);
-  const memo = input.tx.memo;
-  const recipient = input.tx.recipient;
+  const sender = input.sender;
+  const recipient = input.recipient;
+  const fee = new BigNum(input.fee, 10);
+  const amount = new BigNum(input.amount, 10);
+  const numSignatures = input.reqSignatures;
+  const publicKeys = input.signers;
+  const memo = input.memo;
   const anchorMode = StxTx.AnchorMode.Any;
+  const network = parseNetworkName(input.network);
 
-  const options: StxTx.UnsignedMultiSigTokenTransferOptions = { anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo };
-
-  // Conditional fields
-  if (input.tx.network) {
-    const network = parseNetworkName(input.tx.network);
-    if (network) {
-      options.network = network;
+  // Validate sender address if present
+  if (sender) {
+    const addrFromPubkeys = makeMultiSigAddr(publicKeys, numSignatures);
+    if (addrFromPubkeys !== sender) {
+        const message = `Public keys, required signers do not match expected address: expected=${sender}, generated=${addrFromPubkeys}`;
+        throw new Error(message);
     }
   }
 
-  if (input.tx.nonce) {
-    options.nonce = new BigNum(input.tx.nonce, 10);
+  const options: StxTx.UnsignedMultiSigTokenTransferOptions = { anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo, network };
+
+  // Conditional fields
+  if (input.nonce) {
+    options.nonce = new BigNum(input.nonce, 10);
   }
 
   const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer(options);
 
   // Set public keys in auth fields
   // TODO: Is this necessary to set auth fields or already done by `makeUnsignedSTXTokenTransfer()`
-  const authFields = makeSpendingConditionFields(input);
+  const authFields = makeSpendingConditionFields(publicKeys);
   setMultisigTransactionSpendingConditionFields(unsignedTx, authFields);
 
   return unsignedTx

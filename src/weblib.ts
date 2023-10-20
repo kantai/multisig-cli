@@ -1,12 +1,12 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 export * from './lib';
 
-import { MultisigTxInput, getAuthFieldInfo, txDecode, txEncode, makeMultiSigAddr, ledgerSignMultisigTx, makeStxTokenTransferFrom } from './lib';
 import StxApp from "@zondax/ledger-blockstack";
 import LedgerTransportWeb from '@ledgerhq/hw-transport-webhid';
 import BlockstackApp from '@zondax/ledger-blockstack';
 
 import * as StxTx from "@stacks/transactions";
+import * as lib from './lib';
 
 function getInputElement(id: string): string {
     return (document.getElementById(id)! as HTMLInputElement).value.trim()
@@ -43,10 +43,10 @@ export async function sign() {
         const inputPayload = getInputElement('transact-input');
         const hdPath = getInputElement('transact-path');
 
-        const tx = txDecode(inputPayload);
-        const signed_tx = await ledgerSignMultisigTx(app, hdPath, tx);
-        const info = getAuthFieldInfo(tx);
-        const encoded = txEncode(signed_tx);
+        const tx = lib.txDecode(inputPayload);
+        const signed_tx = await lib.ledgerSignMultisigTx(app, hdPath, tx);
+        const info = lib.getAuthFieldInfo(tx);
+        const encoded = lib.txEncode(signed_tx);
         displayMessage('tx', `Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): <br/> <br/> ${encoded}`, 'Signed Transaction')
     } catch(e: any) {
         displayMessage('tx', e.toString(), "Error signing transaction");
@@ -55,51 +55,35 @@ export async function sign() {
 }
 
 export async function generate_transfer() {
-    const fromAddr = getInputElement('from-address');
-    const fromPKsHex = getInputElement('from-pubkeys').split(',').map(x => x.trim()).sort();
+    const sender = getInputElement('from-address');
+    const signers = getInputElement('from-pubkeys').split(',').map(x => x.trim()).sort();
     const reqSignatures = parseInt(getInputElement('from-n'));
     const recipient = getInputElement('to-address');
     const amount = getInputElement('stacks-send');
     const fee = getInputElement('stacks-fee');
     const nonce = getInputElement('nonce');
     const network = getInputElement('stacks-network');
-    const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
 
-    const generatedMultiSigAddress = makeMultiSigAddr(fromPKsHex, reqSignatures);
-
-    if (generatedMultiSigAddress !== fromAddr) {
-        const message = `Public keys, required signers do not match expected address: expected=${fromAddr}, generated=${generatedMultiSigAddress}`;
-        displayMessage('tx', message, "Error generating transaction");
-        throw new Error(message);
-    }
-
-    const multisigData: MultisigTxInput = {
-        tx: {
-            fee,
-            amount,
-            reqSignatures,
-            recipient,
-            nonce,
-            network
-        },
-        spendingFields,
+    const txInput: lib.MultisigTxInput = {
+        sender, recipient, fee, amount,
+        signers, reqSignatures, nonce, network,
     };
 
-    const tx = await makeStxTokenTransferFrom(multisigData);
+    const tx = await lib.makeStxTokenTransferFrom(txInput);
+    const encoded = lib.txEncode(tx);
 
-    const encoded = txEncode(tx);
     displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Unsigned Transaction')
 }
 
 export async function broadcastTransaction() {
     const encodedTx = getInputElement('broadcast-input');
-    const tx = txDecode(encodedTx);
+    const tx = lib.txDecode(encodedTx);
     const res = await StxTx.broadcastTransaction(tx);
     displayMessage('tx', JSON.stringify(res, null, 2), 'Broadcast Transaction')
 }
 
 export async function checkDecode() {
     const encodedTx = getInputElement('check-decode-input');
-    const tx = txDecode(encodedTx);
+    const tx = lib.txDecode(encodedTx);
     displayMessage('tx', `<pre><code>${JSON.stringify(tx, null, 2)}</code></pre>`, 'Decoded Transaction')
 }

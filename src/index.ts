@@ -55,14 +55,14 @@ async function subcommand_make_multi(args: string[], transport: object) {
 
 async function subcommand_create_tx(args: string[]) {
   if (args[0] === '--file') {
-    const txs = await lib.createTxsFromFile(args[1]);
+    const txs = await lib.makeTxsFromFile(args[1]);
     const txs_encoded = txs.map(tx => lib.txEncode(tx));
     console.log(`Unsigned multisig transactions`);
     console.log(`------------------------------`);
     console.log(txs_encoded);
   } else {
-    const fromAddr = await readInput("From Address (C32)");
-    const fromPKsHex = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
+    const sender = await readInput("From Address (C32)");
+    const signers = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
     const reqSignatures = parseInt(await readInput("Required signers (number)"));
     const recipient = await readInput("To Address (C32)");
     const amount = await readInput("microSTX to send");
@@ -70,28 +70,12 @@ async function subcommand_create_tx(args: string[]) {
     const nonce = await readInput("Nonce (optional)");
     const network = await readInput("Network (optional) [testnet/mainnet]");
 
-    const spendingFields = fromPKsHex.map(x => ({ publicKey: x }));
-    const generatedMultiSigAddress = lib.makeMultiSigAddr(fromPKsHex, reqSignatures);
-
-    if (generatedMultiSigAddress !== fromAddr) {
-        const message = `Public keys, required signers do not match expected address: expected=${fromAddr}, generated=${generatedMultiSigAddress}`;
-        throw new Error(message);
-    }
-
-    // Contains tx + metadata
-    const multisigData: lib.MultisigTxInput = {
-        tx: {
-            fee,
-            amount,
-            reqSignatures,
-            recipient,
-            nonce,
-            network
-        },
-        spendingFields,
+    const txInput: lib.MultisigTxInput = {
+        sender, recipient, fee, amount,
+        signers, reqSignatures, nonce, network,
     };
 
-    const tx = await lib.makeStxTokenTransferFrom(multisigData);
+    const tx = await lib.makeStxTokenTransferFrom(txInput);
     const encoded = lib.txEncode(tx);
     console.log(`Unsigned multisig transaction`);
     console.log(`-----------------------------`);
