@@ -10,7 +10,7 @@ import * as C32 from "c32check";
 import { createTransactionAuthField, TransactionAuthField, StacksTransaction } from "@stacks/transactions";
 import * as StxTx from "@stacks/transactions";
 import { StacksNetworkName } from "@stacks/network";
-// import readline from "readline";
+import * as fs from 'node:fs/promises';
 
 import BigNum from "bn.js";
 
@@ -37,11 +37,6 @@ export interface MultisigTxInput {
     publicKey: string,
     signatureVRS?: string,
   }[],
-}
-
-// Need this to serialize BitInt
-(BigInt.prototype as any).toJSON = function() {
-  return this.toString()
 }
 
 // Export `StacksTransaction` as base64-encoded string
@@ -77,6 +72,31 @@ export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number
 export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number): Promise<{pubkey: string, path: string}> {
     const path = `${BTC_MULTISIG_SCRIPT_PATH}/0/${index}`;
     return {pubkey: await getPubKey(app, path), path};
+}
+
+// Create transactions from file path
+export async function createTxsFromFile(file: string): Promise<StacksTransaction[]> {
+  const data = await fs.readFile(file, { encoding: 'utf8' });
+  return await createTxsFromString(data);
+}
+
+// Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
+export async function createTxsFromString(str: string): Promise<StacksTransaction[]> {
+  const json = JSON.parse(str) as MultisigTxInput[];
+  if (!Array.isArray(json)) {
+    throw Error('Expected array')
+  }
+  return await createTxsFromInputs(json);
+}
+
+// Create transactions from `MultisigTxInput[]`
+export async function createTxsFromInputs(inputs: MultisigTxInput[]): Promise<StacksTransaction[]> {
+  // Use Promise.all to process inputs in parallel
+  const txs = await Promise.all(
+     inputs.map(async (input) => await makeStxTokenTransferFrom(input) )
+  );
+
+  return txs;
 }
 
 // TODO: I don't know if something like this is already in Stacks.js (I couldn't find it), but it should be
@@ -142,7 +162,7 @@ function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fi
 }
 
 /// Builds an unsigned transfer out of a multisig data serialization
-export async function makeStxTokenTransferFrom(input: MultisigTxInput) {
+export async function makeStxTokenTransferFrom(input: MultisigTxInput): Promise<StacksTransaction> {
   const fee = new BigNum(input.tx.fee, 10);
   const amount = new BigNum(input.tx.amount, 10);
   const numSignatures = input.tx.reqSignatures;
