@@ -152,7 +152,6 @@ export async function makeStxTokenTransferFrom(input: MultisigTxInput): Promise<
   const fee = new BigNum(input.fee, 10);
   const amount = new BigNum(input.amount, 10);
   const anchorMode = StxTx.AnchorMode.Any;
-  const network = parseNetworkName(input.network);
 
   // Validate sender address if present
   if (sender) {
@@ -163,11 +162,16 @@ export async function makeStxTokenTransferFrom(input: MultisigTxInput): Promise<
     }
   }
 
-  const options: StxTx.UnsignedMultiSigTokenTransferOptions = { anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo, network };
+  const options: StxTx.UnsignedMultiSigTokenTransferOptions = { anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo };
 
   // Conditional fields
   if (input.nonce) {
     options.nonce = new BigNum(input.nonce, 10);
+  }
+
+  const network = parseNetworkName(input.network);
+  if (network) {
+    options.network = network;
   }
 
   const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer(options);
@@ -328,8 +332,8 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
     '0205132dbd1270f66adaf43723940a98be6331abe95bfa53838815bf214a5a2150'
   ];
 
-  console.log(pubkeys);
-  console.log(makeMultiSigAddr(pubkeys, 2));
+  //console.log(pubkeys);
+  //console.log(makeMultiSigAddr(pubkeys, 2));
 
   const transaction = await StxTx.makeUnsignedSTXTokenTransfer({
     fee: new BigNum(300),

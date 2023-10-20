@@ -123,8 +123,8 @@ test('Transaction building from array (success)', async () => {
   const inputs: lib.MultisigTxInput[] = [
     { recipient, fee: '300', amount:  '10000', publicKeys, numSignatures: 3, nonce: '4', network: 'testnet' },
     { recipient, fee: '777', amount: '100000', publicKeys, numSignatures: 2, network: 'testnet' }, // Should work without `nonce`
-    //{ recipient, fee: '300', amount:  '50000', publicKeys, numSignatures: 1, nonce: '1' }, // Should work without `network`
-    //{ recipient, fee: '777', amount: '100000', publicKeys, numSignatures: 2, sender }, // Should work with `sender`
+    { recipient, fee: '300', amount:  '50000', publicKeys, numSignatures: 1, nonce: '1' }, // Should work without `network`
+    { recipient, fee: '777', amount: '100000', publicKeys, numSignatures: 2, sender }, // Should work with `sender`
   ];
 
   const txs = await lib.makeTxsFromInputs(inputs);
