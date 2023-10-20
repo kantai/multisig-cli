@@ -56,8 +56,8 @@ export async function sign() {
 
 export async function generate_transfer() {
     const sender = getInputElement('from-address');
-    const signers = getInputElement('from-pubkeys').split(',').map(x => x.trim()).sort();
-    const reqSignatures = parseInt(getInputElement('from-n'));
+    const publicKeys = getInputElement('from-pubkeys').split(',').map(x => x.trim()).sort();
+    const numSignatures = parseInt(getInputElement('from-n'));
     const recipient = getInputElement('to-address');
     const amount = getInputElement('stacks-send');
     const fee = getInputElement('stacks-fee');
@@ -66,7 +66,7 @@ export async function generate_transfer() {
 
     const txInput: lib.MultisigTxInput = {
         sender, recipient, fee, amount,
-        signers, reqSignatures, nonce, network,
+        publicKeys, numSignatures, nonce, network,
     };
 
     const tx = await lib.makeStxTokenTransferFrom(txInput);

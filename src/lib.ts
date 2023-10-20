@@ -28,8 +28,8 @@ export interface MultisigTxInput {
   recipient: string,
   fee: string,
   amount: string,
-  signers: string[],
-  reqSignatures: number,
+  publicKeys: string[],
+  numSignatures: number,
   nonce?: string,
   network?: string,
   memo?: string,
@@ -148,13 +148,9 @@ export async function makeTxsFromInputs(inputs: MultisigTxInput[]): Promise<Stac
 
 /// Builds an unsigned transfer out of a multisig data serialization
 export async function makeStxTokenTransferFrom(input: MultisigTxInput): Promise<StacksTransaction> {
-  const sender = input.sender;
-  const recipient = input.recipient;
+  const { sender, recipient, numSignatures, publicKeys, memo } = input;
   const fee = new BigNum(input.fee, 10);
   const amount = new BigNum(input.amount, 10);
-  const numSignatures = input.reqSignatures;
-  const publicKeys = input.signers;
-  const memo = input.memo;
   const anchorMode = StxTx.AnchorMode.Any;
   const network = parseNetworkName(input.network);
 

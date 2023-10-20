@@ -62,8 +62,8 @@ async function subcommand_create_tx(args: string[]) {
     console.log(txs_encoded);
   } else {
     const sender = await readInput("From Address (C32)");
-    const signers = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
-    const reqSignatures = parseInt(await readInput("Required signers (number)"));
+    const publicKeys = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
+    const numSignatures = parseInt(await readInput("Required signers (number)"));
     const recipient = await readInput("To Address (C32)");
     const amount = await readInput("microSTX to send");
     const fee = await readInput("microSTX fee");
@@ -72,7 +72,7 @@ async function subcommand_create_tx(args: string[]) {
 
     const txInput: lib.MultisigTxInput = {
         sender, recipient, fee, amount,
-        signers, reqSignatures, nonce, network,
+        publicKeys, numSignatures, nonce, network
     };
 
     const tx = await lib.makeStxTokenTransferFrom(txInput);
