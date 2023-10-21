@@ -103,7 +103,36 @@ export function makeMultiSigAddr(pubkeys: string[], required: number): string {
   const c32Addr = C32.b58ToC32(btcAddr);
   return c32Addr
 }
-  
+
+// Check that pubkeys match sender address and return in correct order
+export function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: string): string[] {
+  // first try in sorted order
+  let authorizedPKs = pubkeys.slice().sort().map((k) => Buffer.from(k, 'hex'));
+  let redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
+  let btcAddr = btc.payments.p2sh({ redeem }).address;
+  if (!btcAddr) {
+    throw Error(`Failed to construct BTC address from pubkeys`);
+  }
+  const c32Addr1 = C32.b58ToC32(btcAddr);
+  if (c32Addr1 == address) {
+    return authorizedPKs.map((k) => k.toString('hex'))
+  }
+
+  // try in order given
+  authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
+  redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
+  btcAddr = btc.payments.p2sh({ redeem }).address;
+  if (!btcAddr) {
+    throw Error(`Failed to construct BTC address from pubkeys`);
+  }
+  const c32Addr2 = C32.b58ToC32(btcAddr);
+  if (c32Addr2 == address) {
+    return authorizedPKs.map((k) => k.toString('hex'))
+  }
+
+  throw `Public keys did not match expected address. Expected ${address}, but pubkeys correspond to ${c32Addr1} or ${c32Addr2}`
+}
+
 /// Builds spending condition fields out of an array of public key hex strings
 function makeSpendingConditionFields(keys: string[]): TransactionAuthField[] {
   return keys
@@ -409,33 +438,4 @@ export async function generateMultiUnsignedTx(app: StxApp) {
     });
 
   return { unsignedTx, pubkeys: partialFields }
-}
-
-// Check that pubkeys match sender address and return in correct order
-export function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: string): string[] {
-  // first try in sorted order
-  let authorizedPKs = pubkeys.slice().sort().map((k) => Buffer.from(k, 'hex'));
-  let redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
-  let btcAddr = btc.payments.p2sh({ redeem }).address;
-  if (!btcAddr) {
-    throw Error(`Failed to construct BTC address from pubkeys`);
-  }
-  const c32Addr1 = C32.b58ToC32(btcAddr);
-  if (c32Addr1 == address) {
-    return authorizedPKs.map((k) => k.toString('hex'))
-  }
-
-  // try in order given
-  authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
-  redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
-  btcAddr = btc.payments.p2sh({ redeem }).address;
-  if (!btcAddr) {
-    throw Error(`Failed to construct BTC address from pubkeys`);
-  }
-  const c32Addr2 = C32.b58ToC32(btcAddr);
-  if (c32Addr2 == address) {
-    return authorizedPKs.map((k) => k.toString('hex'))
-  }
-
-  throw `Public keys did not match expected address. Expected ${address}, but pubkeys correspond to ${c32Addr1} or ${c32Addr2}`
 }
