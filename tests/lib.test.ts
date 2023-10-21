@@ -83,7 +83,7 @@ test('Transaction building (success)', async () => {
     recipient, fee: '300', amount: '10000', publicKeys, numSignatures: 3, nonce: '4', network: 'mainnet'
   };
 
-  const tx = await lib.makeStxTokenTransferFrom(data);
+  const tx = await lib.makeStxTokenTransfer(data);
   const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
 
   it('Should have correct numbers of auth fields', () => {
@@ -111,6 +111,21 @@ test('Transaction building (success)', async () => {
   });
 })
 
+test('Transaction building (failure): Invalid `sender`', async () => {
+  const sender = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH'; // Invalid
+  const recipient = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH';
+  const publicKeys = [
+    "02b30fafab3a12372c5d150d567034f37d60a91168009a779498168b0e9d8ec7f2", // 1
+    "03ce61f1d155738a5e434fc8a61c3e104f891d1ec71576e8ad85abb68b34670d35", // 2
+    "03ef2340518b5867b23598a9cf74611f8b98064f7d55cdb8c107c67b5efcbc5c77", // 3
+  ];
+  const data: lib.MultisigTxInput = {
+    sender, recipient, fee: '300', amount: '10000', publicKeys, numSignatures: 3, nonce: '4', network: 'mainnet'
+  };
+
+  await expect(() => lib.makeStxTokenTransfer(data)).rejects.toThrowError(/not match/);
+})
+
 test('Transaction building from array (success)', async () => {
   const sender = 'SM2R12RQCV9SCAZPM37VSCVP4X3EQK1Y70KCV7EDE'; // This should match signers
   const recipient = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH';
@@ -127,7 +142,7 @@ test('Transaction building from array (success)', async () => {
     { recipient, fee: '777', amount: '100000', publicKeys, numSignatures: 2, sender }, // Should work with `sender`
   ];
 
-  const txs = await lib.makeTxsFromInputs(inputs);
+  const txs = await lib.makeStxTokenTransfers(inputs);
   const expectedTxsLen = inputs.length;
 
   it(`Should have generated ${expectedTxsLen} transactions`, () => {

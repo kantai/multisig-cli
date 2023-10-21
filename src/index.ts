@@ -54,12 +54,11 @@ async function subcommand_make_multi(args: string[], transport: object) {
 }
 
 async function subcommand_create_tx(args: string[]) {
+  let inputs: lib.MultisigTxInput[];
+
+  // Get inputs
   if (args[0] === '--file') {
-    const txs = await lib.makeTxsFromFile(args[1]);
-    const txs_encoded = txs.map(tx => lib.txEncode(tx));
-    console.log(`Unsigned multisig transactions`);
-    console.log(`------------------------------`);
-    console.log(txs_encoded);
+    inputs = await lib.makeTxInputsFromFile(args[1]);
   } else {
     const sender = await readInput("From Address (C32)");
     const publicKeys = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
@@ -70,38 +69,81 @@ async function subcommand_create_tx(args: string[]) {
     const nonce = await readInput("Nonce (optional)");
     const network = await readInput("Network (optional) [testnet/mainnet]");
 
-    const txInput: lib.MultisigTxInput = {
-        sender, recipient, fee, amount,
-        publicKeys, numSignatures, nonce, network
-    };
-
-    const tx = await lib.makeStxTokenTransferFrom(txInput);
-    const encoded = lib.txEncode(tx);
-    console.log(`Unsigned multisig transaction`);
-    console.log(`-----------------------------`);
-    console.log(encoded);
+    inputs = [
+      { sender, recipient, fee, amount, publicKeys, numSignatures, nonce, network }
+    ];
   }
+
+  // Generate transactions
+  const txs = await lib.makeStxTokenTransfers(inputs);
+  const txsEncoded = txs.map(lib.txEncode);
+
+  // Output transactions
+  console.log(`Unsigned multisig transactions`);
+  console.log(`------------------------------`);
+  console.dir(txsEncoded, {depth: null, colors: true})
 }
 
 async function subcommand_sign(args: string[], transport: object) {
   const app = new StxApp(transport);
-  const inputPayload = await readInput("Unsigned or partially signed transaction input (base64)");
   const hdPath = await readInput("Signer path (HD derivation path)");
 
-  const tx = lib.txDecode(inputPayload);
-  console.log("    *** Please check and approve signing on Ledger ***");
-  const signed_tx = await lib.ledgerSignMultisigTx(app, hdPath, tx);
-  const info = lib.getAuthFieldInfo(tx);
-  const encoded = lib.txEncode(signed_tx);
-  console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures): ${encoded}`)
+  let txsEncodedIn: string[];
+
+  // Get transactions
+  if (args[0] === '--file') {
+    txsEncodedIn = await lib.encodedTxsFromFile(args[1]);
+  } else {
+    const txEncoded = await readInput("Unsigned or partially signed transaction input (base64)");
+    txsEncodedIn = [ txEncoded ];
+  }
+
+  // Decode transactions
+  const txsIn = txsEncodedIn.map(lib.txDecode)
+  const txsOut: StxTx.StacksTransaction[] = [];
+
+  // Sign transactions
+  for (const tx of txsIn) {
+    console.log("    *** Please check and approve signing on Ledger ***");
+    const txSigned = await lib.ledgerSignMultisigTx(app, hdPath, tx);
+    txsOut.push(txSigned);
+  }
+
+  // Encode and output transactions
+  if (txsOut.length === 1) {
+    const info = lib.getAuthFieldInfo(txsOut[0]);
+    console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures)`)
+    console.log(`------------------------------`);
+  } else {
+    console.log(`Signed payloads`)
+    console.log(`------------------------------`);
+  }
+
+  const txsEncodedOut = txsOut.map(lib.txEncode)
+  console.dir(txsEncodedOut, {depth: null, colors: true})
 }
 
-async function subcommand_broadcast() {
-  const inputPayload = await readInput("Signed transaction input (base64)");
-  const tx = lib.txDecode(inputPayload);
-  const res = await StxTx.broadcastTransaction(tx);
+async function subcommand_broadcast(args: string[]) {
+  let txsEncoded: string[];
 
-  console.dir(res, {depth: null, colors: true});
+  // Get transactions
+  if (args[0] === '--file') {
+    txsEncoded = await lib.encodedTxsFromFile(args[1]);
+  } else {
+    const txEncoded = await readInput("Signed transaction input (base64)");
+    txsEncoded = [ txEncoded ];
+  }
+
+  // Decode transactions
+  const txs = txsEncoded.map(lib.txDecode);
+
+  // Broadcast transactions. Use async so it happens in parallel
+  const results = await Promise.all(
+    txs.map(async (tx) => await StxTx.broadcastTransaction(tx))
+  );
+
+  // Output results
+  console.dir(results, {depth: null, colors: true});
 }
 
 function subcommand_help() {
@@ -137,7 +179,7 @@ async function main(args: string[]) {
       await subcommand_sign(args, transport);
       break;
     case 'broadcast':
-      await subcommand_broadcast();
+      await subcommand_broadcast(args);
       break;
     case 'help':
     case '-h':

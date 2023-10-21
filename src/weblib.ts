@@ -69,7 +69,7 @@ export async function generate_transfer() {
         publicKeys, numSignatures, nonce, network,
     };
 
-    const tx = await lib.makeStxTokenTransferFrom(txInput);
+    const tx = await lib.makeStxTokenTransfer(txInput);
     const encoded = lib.txEncode(tx);
 
     displayMessage('tx', `Payload: <br/> <br/> ${encoded}`, 'Unsigned Transaction')

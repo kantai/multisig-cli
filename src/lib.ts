@@ -107,7 +107,7 @@ export function makeMultiSigAddr(pubkeys: string[], required: number): string {
 /// Builds spending condition fields out of an array of public key hex strings
 function makeSpendingConditionFields(keys: string[]): TransactionAuthField[] {
   return keys
-    .map(str => StxTx.createStacksPublicKey(str))
+    .map(StxTx.createStacksPublicKey)
     .map(key => StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, key))
 }
 
@@ -122,44 +122,49 @@ function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fi
 }
 
 // Create transactions from file path
-export async function makeTxsFromFile(file: string): Promise<StacksTransaction[]> {
+export async function makeTxInputsFromFile(file: string): Promise<MultisigTxInput[]> {
   const data = await fs.readFile(file, { encoding: 'utf8' });
-  return await makeTxsFromString(data);
+  return makeTxInputsFromText(data);
 }
 
 // Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
-export async function makeTxsFromString(str: string): Promise<StacksTransaction[]> {
-  const json = JSON.parse(str) as MultisigTxInput[];
-  if (!Array.isArray(json)) {
-    throw Error('Expected array')
+export function makeTxInputsFromText(text: string): MultisigTxInput[] {
+  const errorPrefix = 'Expected MultisigTxInput array';
+  const inputs = JSON.parse(text);
+
+  // Do some basic type checking
+  if (!Array.isArray(inputs)) {
+    throw Error(`${errorPrefix}: Data is not an array`);
   }
-  return await makeTxsFromInputs(json);
+  for (const i in inputs) {
+    const input = inputs[i];
+    const t = typeof input;
+    if (t !== 'object') {
+      throw Error(`${errorPrefix}: Element at index ${i} is of type '${t}'`);
+    }
+  }
+
+  return inputs as MultisigTxInput[];
 }
 
 // Create transactions from `MultisigTxInput[]`
-export async function makeTxsFromInputs(inputs: MultisigTxInput[]): Promise<StacksTransaction[]> {
+export async function makeStxTokenTransfers(inputs: MultisigTxInput[]): Promise<StacksTransaction[]> {
   // Use Promise.all to process inputs in parallel
-  const txs = await Promise.all(
-     inputs.map(async (input) => await makeStxTokenTransferFrom(input) )
-  );
-
-  return txs;
+  return await Promise.all(inputs.map(makeStxTokenTransfer));
 }
 
 /// Builds an unsigned transfer out of a multisig data serialization
-export async function makeStxTokenTransferFrom(input: MultisigTxInput): Promise<StacksTransaction> {
-  const { sender, recipient, numSignatures, publicKeys, memo } = input;
+export async function makeStxTokenTransfer(input: MultisigTxInput): Promise<StacksTransaction> {
+  let { publicKeys } = input;
+  const { sender, recipient, numSignatures, memo } = input;
   const fee = new BigNum(input.fee, 10);
   const amount = new BigNum(input.amount, 10);
   const anchorMode = StxTx.AnchorMode.Any;
 
   // Validate sender address if present
+  // This may re-order publicKeys to match address
   if (sender) {
-    const addrFromPubkeys = makeMultiSigAddr(publicKeys, numSignatures);
-    if (addrFromPubkeys !== sender) {
-        const message = `Public keys, required signers do not match expected address: expected=${sender}, generated=${addrFromPubkeys}`;
-        throw new Error(message);
-    }
+    publicKeys = checkAddressPubKeyMatch(publicKeys, numSignatures, sender);
   }
 
   const options: StxTx.UnsignedMultiSigTokenTransferOptions = { anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo };
@@ -218,6 +223,32 @@ export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
     signatures,
     signaturesRequired: spendingCondition.signaturesRequired,
   };
+}
+
+// Create transactions from file path
+export async function encodedTxsFromFile(file: string): Promise<string[]> {
+  const data = await fs.readFile(file, { encoding: 'utf8' });
+  return encodedTxsFromText(data);
+}
+
+// Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
+export function encodedTxsFromText(str: string): string[] {
+  const errorPrefix = 'Expected array of base64-encoded strings';
+  const txsEncoded = JSON.parse(str);
+
+  // Do some basic type checking
+  if (!Array.isArray(txsEncoded)) {
+    throw Error(`${errorPrefix}: Data is not an array`);
+  }
+  for (const i in txsEncoded) {
+    const tx = txsEncoded[i];
+    const t = typeof tx;
+    if (t !== 'string') {
+      throw Error(`${errorPrefix}: Found '${t}' at index ${i}`);
+    }
+  }
+
+  return txsEncoded as string[];
 }
 
 export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: StacksTransaction): Promise<StacksTransaction> {
@@ -380,7 +411,8 @@ export async function generateMultiUnsignedTx(app: StxApp) {
   return { unsignedTx, pubkeys: partialFields }
 }
 
-function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: string) {
+// Check that pubkeys match sender address and return in correct order
+export function checkAddressPubKeyMatch(pubkeys: string[], required: number, address: string): string[] {
   // first try in sorted order
   let authorizedPKs = pubkeys.slice().sort().map((k) => Buffer.from(k, 'hex'));
   let redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });

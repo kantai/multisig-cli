@@ -17,6 +17,13 @@ npm start -- <subcommand> [args]
 | `create_tx`      | Create unsigned multisig transaction                           |
 | `sign`           | Sign multisig transaction with Ledger                          |
 | `decode`         | Decode and print Stacks base64-encoded transaction             |
+| `broadcast`      | Broadcast a transaction to the network                         |
+
+| Flags            | Subcommands                       | Description                                           |
+| ---------------- | ----------------------------------|-------------------------------------------------------|
+| `--file <path>`  | `create_tx`, `sign`, `broadcast`  | Allow bulk operations by reading JSON array from file |
+
+### Workflow
 
 While using this tool, inputs/outputs will be in base64-encoded JSON.
 You will need to copy/paste this between steps to manage application state.
