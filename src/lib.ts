@@ -69,7 +69,7 @@ export function parseNetworkName(input: string | undefined): StacksNetworkName |
 export async function getPubKey(app: StxApp, path: string): Promise<string> {
   const amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
   return amt.publicKey.toString('hex')
-}  
+}
 
 export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number): Promise<string> {
   const path = `${XPUB_PATH}/0/${index}`;
@@ -235,14 +235,14 @@ export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
     authFields += 1;
     const type = f.contents.type;
     switch (type) {
-      case StxTx.StacksMessageType.PublicKey:
-        pubkeys += 1;
-        break;
-      case StxTx.StacksMessageType.MessageSignature:
-        signatures += 1;
-        break;
-      default:
-        console.error(`Unknown auth field type: ${type}`)
+    case StxTx.StacksMessageType.PublicKey:
+      pubkeys += 1;
+      break;
+    case StxTx.StacksMessageType.MessageSignature:
+      signatures += 1;
+      break;
+    default:
+      console.error(`Unknown auth field type: ${type}`)
     }
   });
 
@@ -282,7 +282,7 @@ export function encodedTxsFromText(str: string): string[] {
 
 export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: StacksTransaction): Promise<StacksTransaction> {
   const pubkey = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig))
-        .publicKey.toString('hex');
+    .publicKey.toString('hex');
 
   // Check transaction is correct type
   const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
@@ -325,18 +325,18 @@ export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: Stacks
 
 async function ledgerSignTx(app: StxApp, path: string, partialFields: TransactionAuthField[], unsignedTx: Buffer, prevSigHash?: string) {
   const pubkey = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig))
-        .publicKey.toString('hex');
+    .publicKey.toString('hex');
 
   const outFields = partialFields.slice();
   const pubkeys = partialFields
-        .map((x) => {
-          console.log(x);
-          if (x.contents.type === StxTx.StacksMessageType.PublicKey) {
-            return x.contents.data.toString('hex')
-          } else {
-            return null
-          }
-        });
+    .map((x) => {
+      console.log(x);
+      if (x.contents.type === StxTx.StacksMessageType.PublicKey) {
+        return x.contents.data.toString('hex')
+      } else {
+        return null
+      }
+    });
 
   if (pubkeys.indexOf(pubkey) < 0) {
     throw new Error(`Pubkey ${pubkey} not found in partial tx fields: ${partialFields}`);

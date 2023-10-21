@@ -160,33 +160,33 @@ async function main(args: string[]) {
   const subcommand = args.shift();
 
   switch (subcommand) {
-    case 'get_pub':
-      transport = await getTransport();
-      await subcommand_get_pub(args, transport);
-      break;
-    case 'decode':
-      await subcommand_decode();
-      break;
-    case 'make_multi':
-      transport = await getTransport();
-      await subcommand_make_multi(args, transport);
-      break;
-    case 'create_tx':
-      await subcommand_create_tx(args);
-      break;
-    case 'sign':
-      transport = await getTransport();
-      await subcommand_sign(args, transport);
-      break;
-    case 'broadcast':
-      await subcommand_broadcast(args);
-      break;
-    case 'help':
-    case '-h':
-    case '--help':
-    default:
-      subcommand_help();
-      break;
+  case 'get_pub':
+    transport = await getTransport();
+    await subcommand_get_pub(args, transport);
+    break;
+  case 'decode':
+    await subcommand_decode();
+    break;
+  case 'make_multi':
+    transport = await getTransport();
+    await subcommand_make_multi(args, transport);
+    break;
+  case 'create_tx':
+    await subcommand_create_tx(args);
+    break;
+  case 'sign':
+    transport = await getTransport();
+    await subcommand_sign(args, transport);
+    break;
+  case 'broadcast':
+    await subcommand_broadcast(args);
+    break;
+  case 'help':
+  case '-h':
+  case '--help':
+  default:
+    subcommand_help();
+    break;
   }
 
   await transport?.close();

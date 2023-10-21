@@ -18,7 +18,7 @@
     "webpack": "webpack",
     "cli": "ts-node ./src/index.ts",
     "lint": "eslint .",
-    "lint-fix": "eslint --fix .",
+    "lint:fix": "eslint --fix .",
     "start": "npm run cli",
     "test": "vitest"
   },
