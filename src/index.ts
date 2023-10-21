@@ -12,7 +12,7 @@ async function readInput(query: string): Promise<string> {
   });
 
   const answer: string = await new Promise(resolve => {
-    rl.question(`${query}? `, answer => resolve(answer))
+    rl.question(`${query}? `, answer => resolve(answer));
   });
 
   rl.close();
@@ -44,7 +44,7 @@ async function subcommand_decode() {
   const inputPayload = await readInput("Transaction input (base64)");
   const tx = lib.txDecode(inputPayload);
   //const tx = await lib.generateMultiSignedTx();
-  console.dir(tx, {depth: null, colors: true})
+  console.dir(tx, {depth: null, colors: true});
 }
 
 async function subcommand_make_multi(args: string[], transport: object) {
@@ -81,7 +81,7 @@ async function subcommand_create_tx(args: string[]) {
   // Output transactions
   console.log(`Unsigned multisig transactions`);
   console.log(`------------------------------`);
-  console.dir(txsEncoded, {depth: null, colors: true})
+  console.dir(txsEncoded, {depth: null, colors: true});
 }
 
 async function subcommand_sign(args: string[], transport: object) {
@@ -99,7 +99,7 @@ async function subcommand_sign(args: string[], transport: object) {
   }
 
   // Decode transactions
-  const txsIn = txsEncodedIn.map(lib.txDecode)
+  const txsIn = txsEncodedIn.map(lib.txDecode);
   const txsOut: StxTx.StacksTransaction[] = [];
 
   // Sign transactions
@@ -112,15 +112,15 @@ async function subcommand_sign(args: string[], transport: object) {
   // Encode and output transactions
   if (txsOut.length === 1) {
     const info = lib.getAuthFieldInfo(txsOut[0]);
-    console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures)`)
+    console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures)`);
     console.log(`------------------------------`);
   } else {
-    console.log(`Signed payloads`)
+    console.log(`Signed payloads`);
     console.log(`------------------------------`);
   }
 
-  const txsEncodedOut = txsOut.map(lib.txEncode)
-  console.dir(txsEncodedOut, {depth: null, colors: true})
+  const txsEncodedOut = txsOut.map(lib.txEncode);
+  console.dir(txsEncodedOut, {depth: null, colors: true});
 }
 
 async function subcommand_broadcast(args: string[]) {
@@ -148,7 +148,7 @@ async function subcommand_broadcast(args: string[]) {
 
 function subcommand_help() {
   // TODO
-  console.log("Invalid subcommand")
+  console.log("Invalid subcommand");
 }
 
 //=================
@@ -192,4 +192,4 @@ async function main(args: string[]) {
   await transport?.close();
 }
 
-main(process.argv.slice(2))
+main(process.argv.slice(2));

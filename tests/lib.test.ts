@@ -1,12 +1,12 @@
-import { expect, test, it } from 'vitest'
+import { expect, test, it } from 'vitest';
 
-import * as lib from "../src/lib"
+import * as lib from "../src/lib";
 import * as C32 from "c32check";
 import * as StxTx from "@stacks/transactions";
 
 test('vitest running', () => {
-  expect(true).toBe(true)
-})
+  expect(true).toBe(true);
+});
 
 test('StacksTransaction serialize/deserialize', async () => {
   const tx = await lib.generateMultiSignedTx();
@@ -26,7 +26,7 @@ test('StacksTransaction serialize/deserialize', async () => {
   expect(tx_decoded.serialize).toBeDefined();
   expect(tx_decoded.txid).toBeDefined();
   expect(tx_decoded.verifyOrigin).toBeDefined();
-})
+});
 
 test('StacksTransaction encode/decode', async () => {
   const tx = await lib.generateMultiSignedTx();
@@ -46,7 +46,7 @@ test('StacksTransaction encode/decode', async () => {
   expect(tx_decoded.serialize).toBeDefined();
   expect(tx_decoded.txid).toBeDefined();
   expect(tx_decoded.verifyOrigin).toBeDefined();
-})
+});
 
 test('Multisig address generation', () => {
   const pubkeys = [
@@ -59,7 +59,7 @@ test('Multisig address generation', () => {
   //const c32_expected = "SM2R12RQCV9SCAZPM37VSCVP4X3EQK1Y70KCV7EDE";
   const c32_expected = C32.c32address(StxTx.AddressVersion.MainnetMultiSig, "b01162ecda72c57ed419f7966ec4e8dd7987c704");
   expect(c32_address).toEqual(c32_expected);
-})
+});
 
 test('Multisig address validation (success)', () => {
   //const address = C32.c32address(StxTx.AddressVersion.MainnetMultiSig, "b01162ecda72c57ed419f7966ec4e8dd7987c704");
@@ -81,7 +81,7 @@ test('Multisig address validation (success)', () => {
 
   // Should return keys in order used to generate address
   expect(pubkeysReordered).toEqual(pubkeys);
-})
+});
 
 test('Multisig address validation (failure)', () => {
   //const address = C32.c32address(StxTx.AddressVersion.MainnetMultiSig, "b01162ecda72c57ed419f7966ec4e8dd7987c704");
@@ -92,7 +92,7 @@ test('Multisig address validation (failure)', () => {
     "03ef2340518b5867b23598a9cf74611f8b98064f7d55cdb8c107c67b5efcbc5c77", // 3
   ];
   expect(() => lib.checkAddressPubKeyMatch(pubkeys, 1, address)).toThrowError();
-})
+});
 
 
 test('Get auth field info', async () => {
@@ -104,7 +104,7 @@ test('Get auth field info', async () => {
     signatures: 2,
     signaturesRequired: 2,
   });
-})
+});
 
 test('Transaction building (success)', async () => {
   const recipient = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH';
@@ -132,18 +132,18 @@ test('Transaction building (success)', async () => {
 
   it('Should have correct pubkeys', () => {
     spendingCondition.fields.forEach((f, i) => {
-      expect(f.contents.type).toEqual(StxTx.StacksMessageType.PublicKey)
+      expect(f.contents.type).toEqual(StxTx.StacksMessageType.PublicKey);
       const pubkey = f.contents.data.toString('hex');
-      expect(pubkey).toEqual(publicKeys[i])
+      expect(pubkey).toEqual(publicKeys[i]);
     });
   });
 
   it('Should have correct fee, nonce, and hash mode', () => {
-    expect(spendingCondition.fee).toEqual(300)
-    expect(spendingCondition.nonce).toEqual(4)
-    expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH)
+    expect(spendingCondition.fee).toEqual(300);
+    expect(spendingCondition.nonce).toEqual(4);
+    expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH);
   });
-})
+});
 
 test('Transaction building (failure): Invalid `sender`', async () => {
   const sender = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH'; // Invalid
@@ -158,7 +158,7 @@ test('Transaction building (failure): Invalid `sender`', async () => {
   };
 
   await expect(() => lib.makeStxTokenTransfer(data)).rejects.toThrowError(/not match/);
-})
+});
 
 test('Transaction building from array (success)', async () => {
   const sender = 'SM2R12RQCV9SCAZPM37VSCVP4X3EQK1Y70KCV7EDE'; // This should match signers
@@ -180,7 +180,7 @@ test('Transaction building from array (success)', async () => {
   const expectedTxsLen = inputs.length;
 
   it(`Should have generated ${expectedTxsLen} transactions`, () => {
-    expect(txs.length).toEqual(expectedTxsLen)
+    expect(txs.length).toEqual(expectedTxsLen);
   });
 
   for (const i in inputs) {
@@ -201,18 +201,18 @@ test('Transaction building from array (success)', async () => {
     const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
     it('Should have correct pubkeys', () => {
       spendingCondition.fields.forEach((f, i) => {
-        expect(f.contents.type).toEqual(StxTx.StacksMessageType.PublicKey)
+        expect(f.contents.type).toEqual(StxTx.StacksMessageType.PublicKey);
         const pubkey = f.contents.data.toString('hex');
-        expect(pubkey).toEqual(input.publicKeys[i])
+        expect(pubkey).toEqual(input.publicKeys[i]);
       });
     });
 
     it('Should have correct fee, nonce, and hash mode', () => {
-      expect(spendingCondition.fee).toEqual(parseInt(input.fee))
-      expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH)
+      expect(spendingCondition.fee).toEqual(parseInt(input.fee));
+      expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH);
       if (input.nonce) {
-        expect(spendingCondition.nonce).toEqual(parseInt(input.nonce))
+        expect(spendingCondition.nonce).toEqual(parseInt(input.nonce));
       }
     });
   }
-})
+});

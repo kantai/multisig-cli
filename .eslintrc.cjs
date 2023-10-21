@@ -10,7 +10,7 @@ module.exports = {
     // Style
     'indent': ['error', 2],
     'no-trailing-spaces': 'error',
-    //'semi': 'error',
+    'semi': ['error', 'always'],
     // Safety
     'no-var': 'error',
   },

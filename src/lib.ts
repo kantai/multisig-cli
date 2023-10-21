@@ -68,7 +68,7 @@ export function parseNetworkName(input: string | undefined): StacksNetworkName |
 
 export async function getPubKey(app: StxApp, path: string): Promise<string> {
   const amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
-  return amt.publicKey.toString('hex')
+  return amt.publicKey.toString('hex');
 }
 
 export async function getPubKeySingleSigStandardIndex(app: StxApp, index: number): Promise<string> {
@@ -101,7 +101,7 @@ export function makeMultiSigAddr(pubkeys: string[], required: number): string {
     throw Error(`Failed to construct BTC address from pubkeys`);
   }
   const c32Addr = C32.b58ToC32(btcAddr);
-  return c32Addr
+  return c32Addr;
 }
 
 // Check that pubkeys match sender address and return in correct order
@@ -115,7 +115,7 @@ export function checkAddressPubKeyMatch(pubkeys: string[], required: number, add
   }
   const c32Addr1 = C32.b58ToC32(btcAddr);
   if (c32Addr1 == address) {
-    return authorizedPKs.map((k) => k.toString('hex'))
+    return authorizedPKs.map((k) => k.toString('hex'));
   }
 
   // try in order given
@@ -127,17 +127,17 @@ export function checkAddressPubKeyMatch(pubkeys: string[], required: number, add
   }
   const c32Addr2 = C32.b58ToC32(btcAddr);
   if (c32Addr2 == address) {
-    return authorizedPKs.map((k) => k.toString('hex'))
+    return authorizedPKs.map((k) => k.toString('hex'));
   }
 
-  throw `Public keys did not match expected address. Expected ${address}, but pubkeys correspond to ${c32Addr1} or ${c32Addr2}`
+  throw `Public keys did not match expected address. Expected ${address}, but pubkeys correspond to ${c32Addr1} or ${c32Addr2}`;
 }
 
 /// Builds spending condition fields out of an array of public key hex strings
 function makeSpendingConditionFields(keys: string[]): TransactionAuthField[] {
   return keys
     .map(StxTx.createStacksPublicKey)
-    .map(key => StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, key))
+    .map(key => StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, key));
 }
 
 function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fields: TransactionAuthField[]) {
@@ -215,7 +215,7 @@ export async function makeStxTokenTransfer(input: MultisigTxInput): Promise<Stac
   const authFields = makeSpendingConditionFields(publicKeys);
   setMultisigTransactionSpendingConditionFields(unsignedTx, authFields);
 
-  return unsignedTx
+  return unsignedTx;
 }
 
 export interface AuthFieldInfo {
@@ -242,7 +242,7 @@ export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
       signatures += 1;
       break;
     default:
-      console.error(`Unknown auth field type: ${type}`)
+      console.error(`Unknown auth field type: ${type}`);
     }
   });
 
@@ -313,7 +313,7 @@ export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: Stacks
   const resp = await app.sign(path, signingBuffer);
 
   if (resp.returnCode !== LedgerError.NoErrors) {
-    console.log(resp)
+    console.log(resp);
     throw new Error('Ledger responded with errors');
   }
 
@@ -332,9 +332,9 @@ async function ledgerSignTx(app: StxApp, path: string, partialFields: Transactio
     .map((x) => {
       console.log(x);
       if (x.contents.type === StxTx.StacksMessageType.PublicKey) {
-        return x.contents.data.toString('hex')
+        return x.contents.data.toString('hex');
       } else {
-        return null
+        return null;
       }
     });
 
@@ -361,7 +361,7 @@ async function ledgerSignTx(app: StxApp, path: string, partialFields: Transactio
   }
 
   if (resp.returnCode !== LedgerError.NoErrors) {
-    console.log(resp)
+    console.log(resp);
     throw new Error('Ledger responded with errors');
   }
 
@@ -382,7 +382,7 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
     'dd7229314db5d50122cd8d4ff8975f57317f54c946cd233d8d35f5b616fe961e01',
     '119a851bd1201b93e6477a0a9c7d29515735530df92ab265166ca3da119f803501',
     '22d45b79bda06915c5d1a98da577089763b6c660304d3919e50797352dc6722f01',
-  ]
+  ];
 
   //const privKeys = privkeys.map(StxTx.createStacksPrivateKey);
 
@@ -410,7 +410,7 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
   signer.signOrigin(StxTx.createStacksPrivateKey(privkeys[1]));
   signer.signOrigin(StxTx.createStacksPrivateKey(privkeys[2]));
 
-  return transaction
+  return transaction;
 }
 
 export async function generateMultiUnsignedTx(app: StxApp) {
@@ -434,8 +434,8 @@ export async function generateMultiUnsignedTx(app: StxApp) {
 
   const partialFields =
     pubkeys.map((x) => {
-      return StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, StxTx.createStacksPublicKey(x))
+      return StxTx.createTransactionAuthField(StxTx.PubKeyEncoding.Compressed, StxTx.createStacksPublicKey(x));
     });
 
-  return { unsignedTx, pubkeys: partialFields }
+  return { unsignedTx, pubkeys: partialFields };
 }
