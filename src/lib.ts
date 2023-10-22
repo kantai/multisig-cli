@@ -14,7 +14,6 @@ import * as fs from 'node:fs/promises';
 
 import BigNum from "bn.js";
 
-
 // This will generate pubkeys using
 //  the format: m/44'/5757'/0'/0/x
 const XPUB_PATH = `m/44'/5757'/0'`;
@@ -114,7 +113,7 @@ export function checkAddressPubKeyMatch(pubkeys: string[], required: number, add
     throw Error(`Failed to construct BTC address from pubkeys`);
   }
   const c32Addr1 = C32.b58ToC32(btcAddr);
-  if (c32Addr1 == address) {
+  if (c32Addr1 === address) {
     return authorizedPKs.map((k) => k.toString('hex'));
   }
 
@@ -126,7 +125,7 @@ export function checkAddressPubKeyMatch(pubkeys: string[], required: number, add
     throw Error(`Failed to construct BTC address from pubkeys`);
   }
   const c32Addr2 = C32.b58ToC32(btcAddr);
-  if (c32Addr2 == address) {
+  if (c32Addr2 === address) {
     return authorizedPKs.map((k) => k.toString('hex'));
   }
 
