@@ -1,12 +1,9 @@
-import { expect, test, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import * as cli from "../src/cli";
 //import * as StxTx from "@stacks/transactions";
 
-test('Bulk transfer generation', async () => {
-  // Disable console output
-  console.log = () => {};
-
+describe('Bulk transfer generation', async () => {
   const output = await cli.subcommand_create_tx([
     '--file',
     './tests/fixtures/transaction_inputs.json'

@@ -1,4 +1,4 @@
-import { expect, test, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 
 import * as lib from "../src/lib";
 import * as C32 from "c32check";
@@ -106,7 +106,7 @@ test('Get auth field info', async () => {
   });
 });
 
-test('Transaction building (success)', async () => {
+describe('Transaction building (success)', async () => {
   const recipient = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH';
   const publicKeys = [
     "02b30fafab3a12372c5d150d567034f37d60a91168009a779498168b0e9d8ec7f2", // 1
@@ -139,8 +139,8 @@ test('Transaction building (success)', async () => {
   });
 
   it('Should have correct fee, nonce, and hash mode', () => {
-    expect(spendingCondition.fee).toEqual(300);
-    expect(spendingCondition.nonce).toEqual(4);
+    expect(spendingCondition.fee).toEqual(300n);
+    expect(spendingCondition.nonce).toEqual(4n);
     expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH);
   });
 });
@@ -160,7 +160,7 @@ test('Transaction building (failure): Invalid `sender`', async () => {
   await expect(() => lib.makeStxTokenTransfer(data)).rejects.toThrowError(/not match/);
 });
 
-test('Transaction building from array (success)', async () => {
+describe('Transaction building from array (success)', async () => {
   const sender = 'SM2R12RQCV9SCAZPM37VSCVP4X3EQK1Y70KCV7EDE'; // This should match signers
   const recipient = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH';
   const publicKeys = [
@@ -188,7 +188,7 @@ test('Transaction building from array (success)', async () => {
     const tx = txs[i];
     const expectedAuthFields = input.publicKeys.length;
 
-    it(`Should have ${expectedAuthFields} numbers of auth fields`, () => {
+    it(`Tx ${i} should have ${expectedAuthFields} numbers of auth fields`, () => {
       const info = lib.getAuthFieldInfo(tx[i]);
       expect(info).toEqual({
         authFields: expectedAuthFields,
@@ -199,7 +199,7 @@ test('Transaction building from array (success)', async () => {
     });
 
     const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
-    it('Should have correct pubkeys', () => {
+    it(`Tx ${i} should have correct pubkeys`, () => {
       spendingCondition.fields.forEach((f, i) => {
         expect(f.contents.type).toEqual(StxTx.StacksMessageType.PublicKey);
         const pubkey = f.contents.data.toString('hex');
@@ -207,7 +207,7 @@ test('Transaction building from array (success)', async () => {
       });
     });
 
-    it('Should have correct fee, nonce, and hash mode', () => {
+    it(`Tx ${i} should have correct fee, nonce, and hash mode`, () => {
       expect(spendingCondition.fee).toEqual(parseInt(input.fee));
       expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH);
       if (input.nonce) {
