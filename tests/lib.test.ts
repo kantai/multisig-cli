@@ -188,8 +188,8 @@ describe('Transaction building from array (success)', async () => {
     const tx = txs[i];
     const expectedAuthFields = input.publicKeys.length;
 
-    it(`Tx ${i} should have ${expectedAuthFields} numbers of auth fields`, () => {
-      const info = lib.getAuthFieldInfo(tx[i]);
+    it(`Tx ${i} should have ${expectedAuthFields} auth fields`, () => {
+      const info = lib.getAuthFieldInfo(tx);
       expect(info).toEqual({
         authFields: expectedAuthFields,
         pubkeys: expectedAuthFields,
@@ -208,10 +208,10 @@ describe('Transaction building from array (success)', async () => {
     });
 
     it(`Tx ${i} should have correct fee, nonce, and hash mode`, () => {
-      expect(spendingCondition.fee).toEqual(parseInt(input.fee));
+      expect(spendingCondition.fee).toEqual(BigInt(input.fee));
       expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH);
       if (input.nonce) {
-        expect(spendingCondition.nonce).toEqual(parseInt(input.nonce));
+        expect(spendingCondition.nonce).toEqual(BigInt(input.nonce));
       }
     });
   }
