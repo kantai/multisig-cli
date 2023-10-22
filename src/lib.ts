@@ -12,8 +12,6 @@ import * as StxTx from "@stacks/transactions";
 import { StacksNetworkName } from "@stacks/network";
 import * as fs from 'node:fs/promises';
 
-import BigNum from "bn.js";
-
 // This will generate pubkeys using
 //  the format: m/44'/5757'/0'/0/x
 const XPUB_PATH = `m/44'/5757'/0'`;
@@ -185,8 +183,8 @@ export async function makeStxTokenTransfers(inputs: MultisigTxInput[]): Promise<
 export async function makeStxTokenTransfer(input: MultisigTxInput): Promise<StacksTransaction> {
   let { publicKeys } = input;
   const { sender, recipient, numSignatures, memo } = input;
-  const fee = new BigNum(input.fee, 10);
-  const amount = new BigNum(input.amount, 10);
+  const fee = BigInt(input.fee);
+  const amount = BigInt(input.amount);
   const anchorMode = StxTx.AnchorMode.Any;
 
   // Validate sender address if present
@@ -199,7 +197,7 @@ export async function makeStxTokenTransfer(input: MultisigTxInput): Promise<Stac
 
   // Conditional fields
   if (input.nonce) {
-    options.nonce = new BigNum(input.nonce, 10);
+    options.nonce = BigInt(input.nonce);
   }
 
   const network = parseNetworkName(input.network);
@@ -395,10 +393,10 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
   //console.log(makeMultiSigAddr(pubkeys, 2));
 
   const transaction = await StxTx.makeUnsignedSTXTokenTransfer({
-    fee: new BigNum(300),
+    fee: BigInt(300),
     numSignatures: 2,
     publicKeys: pubkeys,
-    amount: new BigNum(1000),
+    amount: BigInt(1000),
     recipient: "SP000000000000000000002Q6VF78",
     anchorMode: StxTx.AnchorMode.Any,
   });
@@ -423,10 +421,10 @@ export async function generateMultiUnsignedTx(app: StxApp) {
   console.log(makeMultiSigAddr(pubkeys, 2));
 
   const unsignedTx = await StxTx.makeUnsignedSTXTokenTransfer({
-    fee: new BigNum(300),
+    fee: BigInt(300),
     numSignatures: 2,
     publicKeys: pubkeys,
-    amount: new BigNum(1000),
+    amount: BigInt(1000),
     recipient: "SP000000000000000000002Q6VF78",
     anchorMode: StxTx.AnchorMode.Any,
   });
