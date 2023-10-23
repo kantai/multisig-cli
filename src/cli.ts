@@ -66,8 +66,9 @@ export async function subcommand_create_tx(args: string[]): Promise<string[]> {
   let inputs: lib.MultisigTxInput[];
 
   // Get inputs
-  if (args[0] === '--file') {
-    inputs = await lib.makeTxInputsFromFile(args[1]);
+  const idxFile = args.indexOf('--file');
+  if (idxFile >= 0) {
+    inputs = await lib.makeTxInputsFromFile(args[idxFile + 1]);
   } else {
     const sender = await readInput("From Address (C32)");
     const publicKeys = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
@@ -103,8 +104,9 @@ export async function subcommand_sign(args: string[], transport: object): Promis
   let txsEncodedIn: string[];
 
   // Get transactions
-  if (args[0] === '--file') {
-    txsEncodedIn = await lib.encodedTxsFromFile(args[1]);
+  const idxFile = args.indexOf('--file');
+  if (idxFile >= 0) {
+    txsEncodedIn = await lib.encodedTxsFromFile(args[idxFile + 1]);
   } else {
     const txEncoded = await readInput("Unsigned or partially signed transaction input (base64)");
     txsEncodedIn = [ txEncoded ];
@@ -139,11 +141,14 @@ export async function subcommand_sign(args: string[], transport: object): Promis
 }
 
 export async function subcommand_broadcast(args: string[]): Promise<StxTx.TxBroadcastResult[]> {
-  let txsEncoded: string[];
+  // Parse args
+  const idxFile = args.indexOf('--file');
+  const dryRun = args.includes('--dry-run');
 
   // Get transactions
-  if (args[0] === '--file') {
-    txsEncoded = await lib.encodedTxsFromFile(args[1]);
+  let txsEncoded: string[];
+  if (idxFile >= 0) {
+    txsEncoded = await lib.encodedTxsFromFile(args[idxFile + 1]);
   } else {
     const txEncoded = await readInput("Signed transaction input (base64)");
     txsEncoded = [ txEncoded ];
@@ -152,9 +157,19 @@ export async function subcommand_broadcast(args: string[]): Promise<StxTx.TxBroa
   // Decode transactions
   const txs = txsEncoded.map(lib.txDecode);
 
+  // If dry run, replace broadcast fucnction so we don't actually send
+  let broadcastFn = StxTx.broadcastTransaction;
+  if (dryRun) {
+    broadcastFn = async (tx: StxTx.StacksTransaction) => {
+      const info = lib.getAuthFieldInfo(tx);
+      console.log(`txid ${tx.txid()} (${info.signatures}/${info.signaturesRequired} signers)`);
+      return { txid: tx.txid() };
+    };
+  }
+
   // Broadcast transactions. Use async so it happens in parallel
   const results = await Promise.all(
-    txs.map(async (tx) => await StxTx.broadcastTransaction(tx))
+    txs.map(async (tx) => await broadcastFn(tx))
   );
 
   // Output results
