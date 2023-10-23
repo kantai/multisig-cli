@@ -18,7 +18,7 @@
     "cli": "ts-node ./src/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "start": "npm run cli",
+    "start": "npm run cli --",
     "test": "vitest"
   },
   "devDependencies": {
