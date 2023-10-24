@@ -252,17 +252,22 @@ export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
 }
 
 // Get signers after given pubkey that have signed transaction
-export function getSignersAfter(pubkey: string, authFields: TransactionAuthField[])
-{
+export function getSignersAfter(pubkey: string, authFields: TransactionAuthField[]): number[] | null {
   // Find index of pubkey in auth fields
   const pkIndex = authFields
     .findIndex(f => f.contents.type === StxTx.StacksMessageType.PublicKey && f.contents.data.toString('hex') === pubkey);
 
+  // pubkey isn't in signer set or has already signed
+  if (pkIndex < 0) {
+    return null;
+  }
+
   // Find all signatures after pubkey
   return authFields
-    .slice(pkIndex + 1)
-    .filter(f => f.contents.type === StxTx.StacksMessageType.MessageSignature)
-    .map(f => f.contents.data.toString('hex'));
+    .map((field, index) => ({ field, index })) // Keep track of index for each authField
+    .slice(pkIndex + 1) // Ignore field with pubkey and those before it
+    .filter(e => e.field.contents.type === StxTx.StacksMessageType.MessageSignature)
+    .map(e => e.index);
 }
 
 // Create transactions from file path
@@ -322,8 +327,10 @@ export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: Stacks
 
   // Signing must be done in order of pubkey appearance in authFields
   // We can't proceed if order is wrong
-  const signersAfter: string[] = getSignersAfter(pubkey, authFields);
-  if (signersAfter?.length) {
+  const signersAfter = getSignersAfter(pubkey, authFields);
+  if (!signersAfter) {
+    throw new Error(`Pubkey in auth fields but not found by getSignersAfter(): ${pubkey}`);
+  } else if (signersAfter.length) {
     throw new Error(`Invalid signing order! The following signers have already signed: ${signersAfter}`);
   }
 

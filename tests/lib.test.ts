@@ -106,6 +106,50 @@ test('Get auth field info', async () => {
   });
 });
 
+describe('getSignersAfter()', () => {
+  // Base64-encoded 2-of-3 multisig transaction already signed by second signer
+  const txBase64 = 'AAAAAAEEAYPnJCUxoDXGkpmxQDbD2sc51L8zAAAAAAAAAAAAAAAAAAAD6AAAAAMAAplOpWodomg8Rj+JbRLuCjwzlyg2qODW7kMGYMayKklrAgF8BkTyU8YMrmGEMvZc2pIl1qLR2eCCxTDt/LKjZDplUjnPIgiVbvVmmxI9sB6uNCzttk16eZYfTNZEOLe1jdMfAAPEYWY3OqVnUPNjUnLxZ4gzriFjMgucnhRkh9GY0Upb4QACAwIAAAAAAAUUg+ckJTGgNcaSmbFANsPaxznUvzMAAAAAAAGGoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+  // NOTE: This test uses different keypairs than others
+  const publicKeys = [
+    "02994ea56a1da2683c463f896d12ee0a3c33972836a8e0d6ee430660c6b22a496b", // 1
+    "0386c9d0ff45514104ce84d301b90911de76f750184ca1fc2f0b5303e83db9640c", // 2
+    "03c46166373aa56750f3635272f1678833ae2163320b9c9e146487d198d14a5be1", // 3
+  ];
+  const tx = lib.txDecode(txBase64);
+  const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
+  const authFields = spendingCondition.fields;
+
+  it('Input transaction should have 3 auth fields', () => {
+    expect(authFields.length).toEqual(3);
+  });
+
+  it('Should return index of third field for first pubkey', () => {
+    const sigsAfter = lib.getSignersAfter(publicKeys[0], authFields);
+    expect(sigsAfter).toBeDefined();
+    expect(sigsAfter!.length).toEqual(1);
+    expect(sigsAfter![0]).toEqual(1);
+  });
+
+  it('Should return `null` for second pubkey (which already signed)', () => {
+    const sigsAfter = lib.getSignersAfter(publicKeys[1], authFields);
+    expect(sigsAfter).toBeNull();
+  });
+
+  it('Should return empty array for third pubkey', () => {
+    const sigsAfter = lib.getSignersAfter(publicKeys[2], authFields);
+    expect(sigsAfter).toBeDefined();
+    expect(sigsAfter!.length).toEqual(0);
+  });
+
+  it('Should return `null` for pubkey not in signer set', () => {
+    const sigsAfter = lib.getSignersAfter(
+      '02b30fafab3a12372c5d150d567034f37d60a91168009a779498168b0e9d8ec7f2',
+      authFields
+    );
+    expect(sigsAfter).toBeNull();
+  });
+});
+
 describe('Transaction building (success)', async () => {
   const recipient = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH';
   const publicKeys = [
