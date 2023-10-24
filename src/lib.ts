@@ -21,15 +21,15 @@ const XPUB_PATH = `m/44'/5757'/0'`;
 const BTC_MULTISIG_SCRIPT_PATH = `m/5757'/0'/0`;
 
 export interface MultisigTxInput {
-  sender?: string,  // Optional. Can be used to check address generation from pubkeys
-  recipient: string,
-  fee: string,
-  amount: string,
-  publicKeys: string[],
-  numSignatures: number,
-  nonce?: string,
-  network?: string,
-  memo?: string,
+  sender?: string  // Optional. Can be used to check address generation from pubkeys
+  recipient: string
+  fee: string
+  amount: string
+  publicKeys: string[]
+  numSignatures: number
+  nonce?: string
+  network?: string
+  memo?: string
 }
 
 // Export `StacksTransaction` as base64-encoded string
@@ -348,7 +348,7 @@ export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: Stacks
   return tx;
 }
 
-async function ledgerSignTx(app: StxApp, path: string, partialFields: TransactionAuthField[], unsignedTx: Buffer, prevSigHash?: string) {
+export async function ledgerSignTx(app: StxApp, path: string, partialFields: TransactionAuthField[], unsignedTx: Buffer, prevSigHash?: string) {
   const pubkey = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig))
     .publicKey.toString('hex');
 
@@ -438,7 +438,7 @@ export async function generateMultiSignedTx(): Promise<StacksTransaction> {
   return transaction;
 }
 
-export async function generateMultiUnsignedTx(app: StxApp) {
+export async function generateMultiUnsignedTx() {
   const pubkeys = [
     '03827ffa27ad5af481203d4cf5654cd20312398fa92084ff76e4b4dffddafe1059',
     '03a9d11f6d4102ed323740f95668d6f206c5b5cbc5ce5c7028ceba1736fbbd6861',
