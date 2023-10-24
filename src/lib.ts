@@ -64,7 +64,7 @@ export function parseNetworkName(input: string | undefined): StacksNetworkName |
 }
 
 export async function getPubKey(app: StxApp, path: string): Promise<string> {
-  const amt = (await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig));
+  const amt = await app.getAddressAndPubKey(path, StxTx.AddressVersion.TestnetSingleSig);
   return amt.publicKey.toString('hex');
 }
 
@@ -251,6 +251,20 @@ export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
   };
 }
 
+// Get signers after given pubkey that have signed transaction
+export function getSignersAfter(pubkey: string, authFields: TransactionAuthField[])
+{
+  // Find index of pubkey in auth fields
+  const pkIndex = authFields
+    .findIndex(f => f.contents.type === StxTx.StacksMessageType.PublicKey && f.contents.data.toString('hex') === pubkey);
+
+  // Find all signatures after pubkey
+  return authFields
+    .slice(pkIndex + 1)
+    .filter(f => f.contents.type === StxTx.StacksMessageType.MessageSignature)
+    .map(f => f.contents.data.toString('hex'));
+}
+
 // Create transactions from file path
 export async function encodedTxsFromFile(file: string): Promise<string[]> {
   const data = await fs.readFile(file, { encoding: 'utf8' });
@@ -304,6 +318,13 @@ export async function ledgerSignMultisigTx(app: StxApp, path: string, tx: Stacks
 
   if (index < 0) {
     throw new Error(`Pubkey ${pubkey} not found in spending auth fields: ${pubkeys}`);
+  }
+
+  // Signing must be done in order of pubkey appearance in authFields
+  // We can't proceed if order is wrong
+  const signersAfter: string[] = getSignersAfter(pubkey, authFields);
+  if (signersAfter?.length) {
+    throw new Error(`Invalid signing order! The following signers have already signed: ${signersAfter}`);
   }
 
   const signingBuffer = tx.serialize();
