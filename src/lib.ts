@@ -24,7 +24,7 @@ const BTC_MULTISIG_SCRIPT_PATH = `m/5757'/0'/0`;
 export interface MultisigTxInput {
   sender?: string  // Optional. Can be used to check address generation from pubkeys
   recipient: string
-  fee: string
+  fee?: string
   amount: string
   publicKeys: string[]
   numSignatures: number
@@ -228,9 +228,6 @@ export function validateTxInputs(data: object[]): MultisigTxInput[] {
     if (typeof input.recipient !== 'string') {
       throw Error(`${errorPrefix}: Property 'recipient' of element ${i} not valid: ${input.recipient}'`);
     }
-    if (typeof input.fee !== 'string') {
-      throw Error(`${errorPrefix}: Property 'fee' of element ${i} not valid: ${input.fee}'`);
-    }
     if (typeof input.amount !== 'string') {
       throw Error(`${errorPrefix}: Property 'amount' of element ${i} not valid: ${input.amount}'`);
     }
@@ -245,6 +242,19 @@ export function validateTxInputs(data: object[]): MultisigTxInput[] {
     if (typeof input.numSignatures !== 'number') {
       throw Error(`${errorPrefix}: Property 'numSignatures' of element ${i} not valid: ${input.numSignatures}'`);
     }
+    if (input.fee && typeof input.fee !== 'string') {
+      throw Error(`${errorPrefix}: Property 'fee' of element ${i} not valid: ${input.fee}'`);
+    }
+    if (input.nonce && typeof input.nonce !== 'string') {
+      throw Error(`${errorPrefix}: Property 'nonce' of element ${i} not valid: ${input.nonce}'`);
+    }
+    if (input.sender && typeof input.sender !== 'string') {
+      throw Error(`${errorPrefix}: Property 'sender' of element ${i} not valid: ${input.sender}'`);
+    }
+    if (input.memo && typeof input.memo !== 'string') {
+      throw Error(`${errorPrefix}: Property 'memo' of element ${i} not valid: ${input.memo}'`);
+    }
+    // TODO: Network
   }
 
   return data as MultisigTxInput[];
@@ -260,7 +270,6 @@ export async function makeStxTokenTransfers(inputs: MultisigTxInput[]): Promise<
 export async function makeStxTokenTransfer(input: MultisigTxInput): Promise<StacksTransaction> {
   let { publicKeys } = input;
   const { sender, recipient, numSignatures, memo } = input;
-  const fee = BigInt(input.fee);
   const amount = BigInt(input.amount);
   const anchorMode = StxTx.AnchorMode.Any;
 
@@ -270,11 +279,14 @@ export async function makeStxTokenTransfer(input: MultisigTxInput): Promise<Stac
     publicKeys = checkAddressPubKeyMatch(publicKeys, numSignatures, sender);
   }
 
-  const options: StxTx.UnsignedMultiSigTokenTransferOptions = { anchorMode, fee, amount, numSignatures, publicKeys, recipient, memo };
+  const options: StxTx.UnsignedMultiSigTokenTransferOptions = { anchorMode, amount, numSignatures, publicKeys, recipient, memo };
 
   // Conditional fields
   if (input.nonce) {
     options.nonce = BigInt(input.nonce);
+  }
+  if (input.fee) {
+    options.fee = BigInt(input.fee);
   }
 
   const network = parseNetworkName(input.network);

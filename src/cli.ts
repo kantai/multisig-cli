@@ -78,7 +78,7 @@ export async function subcommand_create_tx(args: string[]): Promise<string[]> {
     const numSignatures = parseInt(await readInput("Required signers (number)"));
     const recipient = await readInput("To Address (C32)");
     const amount = await readInput("microSTX to send");
-    const fee = await readInput("microSTX fee");
+    const fee = await readInput("microSTX fee (optional)");
     const nonce = await readInput("Nonce (optional)");
     const network = await readInput("Network (optional) [testnet/mainnet]");
 
