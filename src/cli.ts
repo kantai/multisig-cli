@@ -66,9 +66,12 @@ export async function subcommand_create_tx(args: string[]): Promise<string[]> {
   let inputs: lib.MultisigTxInput[];
 
   // Get inputs
-  const idxFile = args.indexOf('--file');
-  if (idxFile >= 0) {
-    inputs = await lib.makeTxInputsFromFile(args[idxFile + 1]);
+  const idxJsonInputs = args.indexOf('--json-inputs');
+  const idxCsvInputs = args.indexOf('--csv-inputs');
+  if (idxJsonInputs >= 0) {
+    inputs = await lib.makeTxInputsFromFile(args[idxJsonInputs + 1]);
+  } else if (idxCsvInputs >= 0) {
+    inputs = await lib.makeTxInputsFromCSVFile(args[idxCsvInputs + 1]);
   } else {
     const sender = await readInput("From Address (C32)");
     const publicKeys = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
@@ -104,9 +107,9 @@ export async function subcommand_sign(args: string[], transport: object): Promis
   let txsEncodedIn: string[];
 
   // Get transactions
-  const idxFile = args.indexOf('--file');
-  if (idxFile >= 0) {
-    txsEncodedIn = await lib.encodedTxsFromFile(args[idxFile + 1]);
+  const idxJsonTxs = args.indexOf('--json-txs');
+  if (idxJsonTxs >= 0) {
+    txsEncodedIn = await lib.encodedTxsFromFile(args[idxJsonTxs + 1]);
   } else {
     const txEncoded = await readInput("Unsigned or partially signed transaction input (base64)");
     txsEncodedIn = [ txEncoded ];
@@ -142,13 +145,13 @@ export async function subcommand_sign(args: string[], transport: object): Promis
 
 export async function subcommand_broadcast(args: string[]): Promise<StxTx.TxBroadcastResult[]> {
   // Parse args
-  const idxFile = args.indexOf('--file');
+  const idxJsonTxs = args.indexOf('--json-txs');
   const dryRun = args.includes('--dry-run');
 
   // Get transactions
   let txsEncoded: string[];
-  if (idxFile >= 0) {
-    txsEncoded = await lib.encodedTxsFromFile(args[idxFile + 1]);
+  if (idxJsonTxs >= 0) {
+    txsEncoded = await lib.encodedTxsFromFile(args[idxJsonTxs + 1]);
   } else {
     const txEncoded = await readInput("Signed transaction input (base64)");
     txsEncoded = [ txEncoded ];

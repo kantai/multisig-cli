@@ -5,7 +5,7 @@ import * as cli from "../src/cli";
 
 describe('Bulk transfer generation', async () => {
   const output = await cli.subcommand_create_tx([
-    '--file',
+    '--json-inputs',
     './tests/fixtures/transaction_inputs.json'
   ]);
 
@@ -23,7 +23,7 @@ describe('Bulk transfer generation', async () => {
 
 describe('Broadcast bulk transactions (dry-run)', async () => {
   const output = await cli.subcommand_broadcast([
-    '--file',
+    '--json-txs',
     './tests/fixtures/transactions_unsigned.json',
     '--dry-run'
   ]);

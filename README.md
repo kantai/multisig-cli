@@ -19,9 +19,11 @@ npm start -- <subcommand> [args]
 | `decode`         | Decode and print Stacks base64-encoded transaction             |
 | `broadcast`      | Broadcast a transaction to the network                         |
 
-| Flags            | Subcommands                       | Description                                           |
-| ---------------- | ----------------------------------|-------------------------------------------------------|
-| `--file <path>`  | `create_tx`, `sign`, `broadcast`  | Allow bulk operations by reading JSON array from file |
+| Flags                 | Subcommands                       | Description                                           |
+| --------------------- | ----------------------------------|-------------------------------------------------------|
+| `--file <path>`       | `create_tx`, `sign`, `broadcast`  | Allow bulk operations by reading JSON array from file |
+| `--csv-inputs <path>` | `create_tx`                       | Read transaction inputs from a CSV file               |
+| `--csv-keys <path>`   | `sign`                            | Sign using pubkeys/paths from a CSV file              |
 
 ### Workflow
 
