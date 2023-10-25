@@ -19,9 +19,9 @@ module.exports = {
     'no-duplicate-imports': 'warn',
 
     // Layout & Formatting
-    'indent': ['error', 2],
-    'no-trailing-spaces': 'error',
-    'semi': ['error', 'always'],
+    'indent': ['warn', 2],
+    'no-trailing-spaces': 'warn',
+    'semi': ['warn', 'always'],
     //'quotes': ['error', 'single', { 'avoidEscape': true, 'allowTemplateLiterals': true }],
 
     // Suggestions
