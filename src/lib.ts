@@ -158,7 +158,7 @@ export async function makeKeyPathMapFromCSVFile(file: string): Promise<Map<strin
 export function makeKeyPathMapFromCSVText(text: string): Map<string, string> {
   const { data, errors } = Papa.parse(text, { header: true });
 
-  if (errors) {
+  if (errors.length) {
     console.dir(errors, {depth: null, colors: true});
     throw Error('Errors parsing CSV data');
   }
@@ -184,7 +184,7 @@ export async function makeTxInputsFromCSVFile(file: string): Promise<MultisigTxI
 export function makeTxInputsFromCSVText(text: string): MultisigTxInput[] {
   const { data, errors } = Papa.parse(text, { header: true });
 
-  if (errors) {
+  if (errors.length) {
     console.dir(errors, {depth: null, colors: true});
     throw Error('Errors parsing CSV data');
   }
@@ -193,10 +193,31 @@ export function makeTxInputsFromCSVText(text: string): MultisigTxInput[] {
     throw Error('Data is not array');
   }
 
-  // Everything is parsed as strings. Need to fix up types here
+  // Everything is parsed as strings. Need to fix up the data here...
   data.forEach((line: any) => {
+    Object.keys(line).forEach(k => {
+      const v = line[k];
+      if (v === undefined || v === null  || v === '') {
+        // Delete null, undefined, or empty string fields
+        delete line[k];
+      } else if (k.includes('/')) {
+        // Build arrays out of keys with '/'
+        const [ arr, index, ...rest ] = k.split('/');
+        if (rest.length) {
+          throw Error('Multidimensional arrays not supported');
+        }
+        const i = parseInt(index);
+        line[arr] ??= [];
+        line[arr][i] = v;
+        delete line[k];
+      }
+    });
+
+    // Conversions
     line['numSignatures'] = parseInt(line['numSignatures']);
   });
+  //console.dir(data, {depth: null, colors: true});
+
   return validateTxInputs(data as MultisigTxInput[]);
 }
 
