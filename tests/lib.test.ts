@@ -101,7 +101,7 @@ test('Get auth field info', async () => {
   const info = lib.getAuthFieldInfo(tx);
   expect(info).toEqual({
     authFields: 3,
-    pubkeys: 1,
+    pubkeys: ['03827ffa27ad5af481203d4cf5654cd20312398fa92084ff76e4b4dffddafe1059'],
     signatures: 2,
     signaturesRequired: 2,
   });
@@ -170,7 +170,7 @@ describe('Transaction building', async () => {
       const info = lib.getAuthFieldInfo(tx);
       expect(info).toEqual({
         authFields: 3,
-        pubkeys: 3,
+        pubkeys: publicKeys,
         signatures: 0,
         signaturesRequired: 3,
       });
@@ -238,7 +238,7 @@ describe('Transaction building', async () => {
         const info = lib.getAuthFieldInfo(tx);
         expect(info).toEqual({
           authFields: expectedAuthFields,
-          pubkeys: expectedAuthFields,
+          pubkeys: input.publicKeys,
           signatures: 0,
           signaturesRequired: input.numSignatures,
         });

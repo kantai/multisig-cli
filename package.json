@@ -21,7 +21,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "start": "npm run cli --",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@ledgerhq/hw-transport-node-speculos-http": "^6.27.1",

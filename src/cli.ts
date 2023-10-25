@@ -102,7 +102,6 @@ export async function subcommand_create_tx(args: string[]): Promise<string[]> {
 
 export async function subcommand_sign(args: string[], transport: object): Promise<string[]> {
   const app = new StxApp(transport);
-  const hdPath = await readInput("Signer path (HD derivation path)");
 
   let txsEncodedIn: string[];
 
@@ -119,11 +118,26 @@ export async function subcommand_sign(args: string[], transport: object): Promis
   const txsIn = txsEncodedIn.map(lib.txDecode);
   const txsOut: StxTx.StacksTransaction[] = [];
 
+  // Read key/path mappings if given
+  let keyPaths = new Map<string, string>;
+  const idxCsvKeys = args.indexOf('--csv-keys');
+  if (idxJsonTxs >= 0) {
+    keyPaths = await lib.makeKeyPathMapFromCSVFile(args[idxCsvKeys + 1]);
+  }
+
   // Sign transactions
-  for (const tx of txsIn) {
-    console.log("    *** Please check and approve signing on Ledger ***");
-    const txSigned = await lib.ledgerSignMultisigTx(app, hdPath, tx);
-    txsOut.push(txSigned);
+  for (let tx of txsIn) {
+    const info = lib.getAuthFieldInfo(tx);
+    let sigs = info.signatures;
+    for (const pk of info.pubkeys) {
+      if (sigs >= info.signaturesRequired) break;
+      const hdPath = keyPaths.get(pk) ?? await readInput(`HD derivation path for ${pk} (empty to skip for this key)`);
+      if (!hdPath) continue;
+      console.log("    *** Please check and approve signing on Ledger ***");
+      tx = await lib.ledgerSignMultisigTx(app, hdPath, tx);
+      sigs += 1;
+    }
+    txsOut.push(tx);
   }
 
   // Encode and output transactions
@@ -184,7 +198,7 @@ export async function subcommand_broadcast(args: string[]): Promise<StxTx.TxBroa
 
 export function subcommand_help() {
   // TODO
-  console.log("Invalid subcommand");
+  console.log("Invalid subcommand. See README.md for usage");
 }
 
 //=================

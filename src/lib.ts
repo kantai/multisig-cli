@@ -149,6 +149,28 @@ function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fi
 }
 
 // Create transactions from file path
+export async function makeKeyPathMapFromCSVFile(file: string): Promise<Map<string, string>> {
+  const data = await fs.readFile(file, { encoding: 'utf8' });
+  return makeKeyPathMapFromCSVText(data);
+}
+
+// Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
+export function makeKeyPathMapFromCSVText(text: string): Map<string, string> {
+  const data = Papa.parse(text);
+
+  // Everything is parsed as strings. Need to fix up types here
+  if (!Array.isArray(data)) {
+    throw Error('Data is not an array');
+  }
+
+  const keyPaths = new Map<string, string>();
+  for (const line of data) {
+    keyPaths.set(line.key, line.path);
+  }
+  return keyPaths;
+}
+
+// Create transactions from file path
 export async function makeTxInputsFromCSVFile(file: string): Promise<MultisigTxInput[]> {
   const data = await fs.readFile(file, { encoding: 'utf8' });
   return makeTxInputsFromCSVText(data);
@@ -262,15 +284,15 @@ export async function makeStxTokenTransfer(input: MultisigTxInput): Promise<Stac
 
 export interface AuthFieldInfo {
   authFields: number,
-  pubkeys: number,
+  pubkeys: string[],
   signatures: number,
   signaturesRequired: number,
 }
 
 export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
   let authFields = 0;
-  let pubkeys = 0;
   let signatures = 0;
+  const pubkeys: string[] = [];
 
   const spendingCondition = tx.auth.spendingCondition as StxTx.MultiSigSpendingCondition;
   spendingCondition.fields.forEach(f => {
@@ -278,7 +300,7 @@ export function getAuthFieldInfo(tx: StacksTransaction): AuthFieldInfo {
     const type = f.contents.type;
     switch (type) {
     case StxTx.StacksMessageType.PublicKey:
-      pubkeys += 1;
+      pubkeys.push(f.contents.data.toString('hex'));
       break;
     case StxTx.StacksMessageType.MessageSignature:
       signatures += 1;
