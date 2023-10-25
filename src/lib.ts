@@ -156,7 +156,11 @@ export async function makeKeyPathMapFromCSVFile(file: string): Promise<Map<strin
 
 // Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
 export function makeKeyPathMapFromCSVText(text: string): Map<string, string> {
-  const { data, errors } = Papa.parse(text, { header: true });
+  const { data, errors } = Papa.parse(text, {
+    delimiter: ',',
+    header: true,
+    skipEmptyLines: false
+  });
 
   if (errors.length) {
     console.dir(errors, {depth: null, colors: true});
@@ -182,7 +186,11 @@ export async function makeTxInputsFromCSVFile(file: string): Promise<MultisigTxI
 
 // Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
 export function makeTxInputsFromCSVText(text: string): MultisigTxInput[] {
-  const { data, errors } = Papa.parse(text, { header: true });
+  const { data, errors } = Papa.parse(text, {
+    delimiter: ',',
+    header: true,
+    skipEmptyLines: false
+  });
 
   if (errors.length) {
     console.dir(errors, {depth: null, colors: true});

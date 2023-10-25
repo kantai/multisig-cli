@@ -107,6 +107,20 @@ test('Get auth field info', async () => {
   });
 });
 
+describe('Parse key/path map CSV file', async () => {
+  const keyPaths = await lib.makeKeyPathMapFromCSVFile('./tests/fixtures/key_path_map.csv');
+
+  it('Should return correct path for valid key', () => {
+    const path = keyPaths.get('02994ea56a1da2683c463f896d12ee0a3c33972836a8e0d6ee430660c6b22a496b');
+    expect(path).toEqual(`m/5757'/0'/0/0/1`);
+  });
+
+  it('Should fail on invalid key', () => {
+    const path = keyPaths.get('03ef2340518b5867b23598a9cf74611f8b98064f7d55cdb8c107c67b5efcbc5c77');
+    expect(path).toBeUndefined();
+  });
+});
+
 describe('getSignersAfter()', () => {
   // Base64-encoded 2-of-3 multisig transaction already signed by second signer
   const txBase64 = 'AAAAAAEEAYPnJCUxoDXGkpmxQDbD2sc51L8zAAAAAAAAAAAAAAAAAAAD6AAAAAMAAplOpWodomg8Rj+JbRLuCjwzlyg2qODW7kMGYMayKklrAgF8BkTyU8YMrmGEMvZc2pIl1qLR2eCCxTDt/LKjZDplUjnPIgiVbvVmmxI9sB6uNCzttk16eZYfTNZEOLe1jdMfAAPEYWY3OqVnUPNjUnLxZ4gzriFjMgucnhRkh9GY0Upb4QACAwIAAAAAAAUUg+ckJTGgNcaSmbFANsPaxznUvzMAAAAAAAGGoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
@@ -254,10 +268,12 @@ describe('Transaction building', async () => {
       });
 
       it(`Tx ${i} should have correct fee, nonce, and hash mode`, () => {
-        expect(spendingCondition.fee).toEqual(BigInt(input.fee));
         expect(spendingCondition.hashMode).toEqual(StxTx.AddressHashMode.SerializeP2SH);
         if (input.nonce) {
           expect(spendingCondition.nonce).toEqual(BigInt(input.nonce));
+        }
+        if (input.fee) {
+          expect(spendingCondition.fee).toEqual(BigInt(input.fee));
         }
       });
     }
