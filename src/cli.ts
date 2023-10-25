@@ -92,8 +92,10 @@ export async function subcommand_create_tx(args: string[]): Promise<string[]> {
   const txsEncoded = txs.map(lib.txEncode);
 
   // Output transactions
-  console.log(`Unsigned multisig transactions`);
-  console.log(`------------------------------`);
+  if (txsEncoded.length === 1) {
+    console.log(`Unsigned multisig transaction`);
+    console.log(`-----------------------------`);
+  }
   console.dir(txsEncoded, {depth: null, colors: true});
 
   // return value for unit testing
@@ -144,9 +146,6 @@ export async function subcommand_sign(args: string[], transport: object): Promis
   if (txsOut.length === 1) {
     const info = lib.getAuthFieldInfo(txsOut[0]);
     console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures)`);
-    console.log(`------------------------------`);
-  } else {
-    console.log(`Signed payloads`);
     console.log(`------------------------------`);
   }
 

@@ -156,16 +156,20 @@ export async function makeKeyPathMapFromCSVFile(file: string): Promise<Map<strin
 
 // Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
 export function makeKeyPathMapFromCSVText(text: string): Map<string, string> {
-  const data = Papa.parse(text);
+  const { data, errors } = Papa.parse(text, { header: true });
 
-  // Everything is parsed as strings. Need to fix up types here
+  if (errors) {
+    console.dir(errors, {depth: null, colors: true});
+    throw Error('Errors parsing CSV data');
+  }
+
   if (!Array.isArray(data)) {
     throw Error('Data is not an array');
   }
 
   const keyPaths = new Map<string, string>();
   for (const line of data) {
-    keyPaths.set(line.key, line.path);
+    keyPaths.set(line?.key, line?.path);
   }
   return keyPaths;
 }
@@ -178,16 +182,22 @@ export async function makeTxInputsFromCSVFile(file: string): Promise<MultisigTxI
 
 // Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
 export function makeTxInputsFromCSVText(text: string): MultisigTxInput[] {
-  const data = Papa.parse(text);
-  // Everything is parsed as strings. Need to fix up types here
-  if (!Array.isArray(data)) {
-    throw Error('Data is not an array');
+  const { data, errors } = Papa.parse(text, { header: true });
+
+  if (errors) {
+    console.dir(errors, {depth: null, colors: true});
+    throw Error('Errors parsing CSV data');
   }
 
+  if (!Array.isArray(data)) {
+    throw Error('Data is not array');
+  }
+
+  // Everything is parsed as strings. Need to fix up types here
   data.forEach((line: any) => {
     line['numSignatures'] = parseInt(line['numSignatures']);
   });
-  return validateTxInputs(data);
+  return validateTxInputs(data as MultisigTxInput[]);
 }
 
 // Create transactions from file path
