@@ -4,6 +4,7 @@
 
 import StxApp from "@zondax/ledger-blockstack";
 import { LedgerError } from "@zondax/ledger-blockstack";
+import Papa from 'papaparse';
 
 import * as btc from "bitcoinjs-lib";
 import * as C32 from "c32check";
@@ -148,6 +149,26 @@ function setMultisigTransactionSpendingConditionFields(tx: StacksTransaction, fi
 }
 
 // Create transactions from file path
+export async function makeTxInputsFromCSVFile(file: string): Promise<MultisigTxInput[]> {
+  const data = await fs.readFile(file, { encoding: 'utf8' });
+  return makeTxInputsFromCSVText(data);
+}
+
+// Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
+export function makeTxInputsFromCSVText(text: string): MultisigTxInput[] {
+  const data = Papa.parse(text);
+  // Everything is parsed as strings. Need to fix up types here
+  if (!Array.isArray(data)) {
+    throw Error('Data is not an array');
+  }
+
+  data.forEach((line: any) => {
+    line['numSignatures'] = parseInt(line['numSignatures']);
+  });
+  return validateTxInputs(data);
+}
+
+// Create transactions from file path
 export async function makeTxInputsFromFile(file: string): Promise<MultisigTxInput[]> {
   const data = await fs.readFile(file, { encoding: 'utf8' });
   return makeTxInputsFromText(data);
@@ -155,11 +176,15 @@ export async function makeTxInputsFromFile(file: string): Promise<MultisigTxInpu
 
 // Create transactions from raw string data (must be JSON array of `MultisigTxInput`)
 export function makeTxInputsFromText(text: string): MultisigTxInput[] {
-  const errorPrefix = 'Expected MultisigTxInput array';
-  const inputs = JSON.parse(text);
+  const data = JSON.parse(text);
+  return validateTxInputs(data);
+}
 
-  // Do some basic type checking
-  if (!Array.isArray(inputs)) {
+export function validateTxInputs(data: object[]): MultisigTxInput[] {
+  const errorPrefix = 'Transaction input validation failed';
+  const inputs = data as MultisigTxInput[];
+
+  if (!Array.isArray(data)) {
     throw Error(`${errorPrefix}: Data is not an array`);
   }
   for (const i in inputs) {
@@ -168,9 +193,29 @@ export function makeTxInputsFromText(text: string): MultisigTxInput[] {
     if (t !== 'object') {
       throw Error(`${errorPrefix}: Element at index ${i} is of type '${t}'`);
     }
+    if (typeof input.recipient !== 'string') {
+      throw Error(`${errorPrefix}: Property 'recipient' of element ${i} not valid: ${input.recipient}'`);
+    }
+    if (typeof input.fee !== 'string') {
+      throw Error(`${errorPrefix}: Property 'fee' of element ${i} not valid: ${input.fee}'`);
+    }
+    if (typeof input.amount !== 'string') {
+      throw Error(`${errorPrefix}: Property 'amount' of element ${i} not valid: ${input.amount}'`);
+    }
+    if (!Array.isArray(input.publicKeys)) {
+      throw Error(`${errorPrefix}: Property 'publicKeys' of element ${i} not valid: ${input.publicKeys}'`);
+    }
+    for (const e of input.publicKeys) {
+      if (typeof e !== 'string') {
+        throw Error(`${errorPrefix}: Property 'publicKeys' of element ${i} contains invalid element: ${e}'`);
+      }
+    }
+    if (typeof input.numSignatures !== 'number') {
+      throw Error(`${errorPrefix}: Property 'numSignatures' of element ${i} not valid: ${input.numSignatures}'`);
+    }
   }
 
-  return inputs as MultisigTxInput[];
+  return data as MultisigTxInput[];
 }
 
 // Create transactions from `MultisigTxInput[]`

@@ -91,7 +91,6 @@ describe('Multisig address validation', () => {
       "02b30fafab3a12372c5d150d567034f37d60a91168009a779498168b0e9d8ec7f2", // 1
       "03ce61f1d155738a5e434fc8a61c3e104f891d1ec71576e8ad85abb68b34670d35", // 2
       "03ef2340518b5867b23598a9cf74611f8b98064f7d55cdb8c107c67b5efcbc5c77", // 3
-
     ];
     expect(() => lib.checkAddressPubKeyMatch(pubkeys, 1, address)).toThrowError();
   });
