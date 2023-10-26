@@ -2,6 +2,15 @@
 
 Command line utility written in NodeJS for creating and signing Stacks multisig transactions with a Ledger device
 
+## Dependencies
+
+You will need to have `nodejs` and `npm` installed.
+After cloning the repository, go to the project root and run:
+
+```sh
+npm install
+```
+
 ## How to Run
 
 ### CLI
@@ -21,18 +30,14 @@ npm start -- <subcommand> [args]
 
 | Flags                 | Subcommands                       | Description                                           |
 | --------------------- | ----------------------------------|-------------------------------------------------------|
-| `--file <path>`       | `create_tx`, `sign`, `broadcast`  | Allow bulk operations by reading JSON array from file |
+| `--json-inputs <path>`| `create_tx`                       | Read transaction inputs from JSON file                |
 | `--csv-inputs <path>` | `create_tx`                       | Read transaction inputs from a CSV file               |
+| `--json-txs <path>`   | `sign`, `broadcast`               | Allow bulk operations by reading JSON array from file |
 | `--csv-keys <path>`   | `sign`                            | Sign using pubkeys/paths from a CSV file              |
 
-### Workflow
+## Examples
 
-While using this tool, inputs/outputs will be in base64-encoded JSON.
-You will need to copy/paste this between steps to manage application state.
-
-The general work flow should go something like this:
-
-#### Recieving funds
+### Recieving Funds
 
 1. Get any Ledger public keys needed
    ```sh
@@ -46,9 +51,10 @@ The general work flow should go something like this:
 
 3. Use any wallet to send funds to the address
 
-#### Sending funds
+### Single Transaction Using User Input
 
-You will need the multisig address and pubkeys that were used in the previous section
+While using this tool, inputs/outputs will be in base64-encoded JSON.
+You will need to copy/paste this between steps to manage application state.
 
 1. Create a transaction
    ```sh
@@ -68,4 +74,21 @@ You will need the multisig address and pubkeys that were used in the previous se
 3. Broadcast transaction
    ```sh
    npm start -- broadcast
+   ```
+
+### Bulk Transactions
+
+1. Create the transactions from a CSV file and save outputs to file
+   ```sh
+    npm start -- create_tx --csv-inputs $CSV_INPUTS_FILE > transactions.json
+   ```
+
+2. Sign the transactions and save outputs to file
+   ```sh
+   npm start -- sign --json-txs transactions.json --csv-keys $CSV_KEYS_FILE > signed_transactions.json
+   ```
+
+3. Broadcast transactions
+   ```sh
+   npm start -- broadcast --json-txs signed_transactions.json > broadcast_results.json
    ```
