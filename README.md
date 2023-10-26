@@ -92,3 +92,21 @@ You will need to copy/paste this between steps to manage application state.
    ```sh
    npm start -- broadcast --json-txs signed_transactions.json > broadcast_results.json
    ```
+
+## Using Docker
+
+You will need Docker and `just` (can be installed by `cargo install just`)
+
+## Building the Image
+
+```sh
+just build
+```
+
+## Running the Image
+
+Run the same way you would run normally, but replace the `npm start --` prefix with:
+
+```sh
+just run [args...]
+```
