@@ -173,7 +173,8 @@ export function makeKeyPathMapFromCSVText(text: string): Map<string, string> {
 
   const keyPaths = new Map<string, string>();
   for (const line of data) {
-    keyPaths.set(line?.key, line?.path);
+    const l = line as any;
+    keyPaths.set(l?.key, l?.path);
   }
   return keyPaths;
 }
