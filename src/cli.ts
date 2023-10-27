@@ -91,12 +91,13 @@ export async function subcommand_create_tx(args: string[]): Promise<string[]> {
   const txs = await lib.makeStxTokenTransfers(inputs);
   const txsEncoded = txs.map(lib.txEncode);
 
-  // Output transactions
-  if (txsEncoded.length === 1) {
-    console.log(`Unsigned multisig transaction`);
-    console.log(`-----------------------------`);
+  // Output transactions. Show extra headers and colors if we are not outputting to pipe
+  const colors = process.stdout.isTTY;
+  if (colors) {
+    console.log(`Unsigned multisig transaction(s)`);
+    console.log(`--------------------------------`);
   }
-  console.dir(txsEncoded, {depth: null, colors: true});
+  console.dir(txsEncoded, { depth: null, colors });
 
   // return value for unit testing
   return txsEncoded;
@@ -143,14 +144,16 @@ export async function subcommand_sign(args: string[], transport: object): Promis
   }
 
   // Encode and output transactions
-  if (txsOut.length === 1) {
+  // Show extra headers and colors if we are not outputting to pipe
+  const colors = process.stdout.isTTY;
+  if (colors) {
     const info = lib.getAuthFieldInfo(txsOut[0]);
     console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures)`);
     console.log(`------------------------------`);
   }
 
   const txsEncodedOut = txsOut.map(lib.txEncode);
-  console.dir(txsEncodedOut, {depth: null, colors: true});
+  console.dir(txsEncodedOut, { depth: null, colors });
 
   // return value for unit testing
   return txsEncodedOut;
@@ -189,7 +192,9 @@ export async function subcommand_broadcast(args: string[]): Promise<StxTx.TxBroa
   );
 
   // Output results
-  console.dir(results, {depth: null, colors: true});
+  // Show extra headers and colors if we are not outputting to pipe
+  const colors = process.stdout.isTTY;
+  console.dir(results, { depth: null, colors });
 
   // return value for unit testing
   return results;
