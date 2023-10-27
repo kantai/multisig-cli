@@ -8,7 +8,7 @@ run *args:
 	#!/usr/bin/env bash
 	set -euxo pipefail
 	docker run \
-		--rm -it \
+		--rm -i \
 		--privileged \
 		--env APP_USER="$(id -un)" \
 		--env APP_UID="$(id -u)" \
@@ -16,6 +16,7 @@ run *args:
 		--env APP_GID="$(id -g)" \
 		--env APP_DIR=/mnt \
 		--mount src="$(pwd)",target=/mnt,type=bind \
+		--mount src=/dev,target=/dev,type=bind \
 		{{IMAGE}}:{{TAG}} {{args}}
 
 lint:

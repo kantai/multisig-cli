@@ -85,8 +85,9 @@ You will need to copy/paste this between steps to manage application state.
 
 2. Sign the transactions and save outputs to file
    ```sh
-   npm start -- sign --json-txs transactions.json --csv-keys $CSV_KEYS_FILE > signed_transactions.json
+   npm start -- sign --json-txs transactions.json --csv-keys $CSV_KEYS_FILE
    ```
+   Copy and paste the output into `signed_transactions.json` for the next step
 
 3. Broadcast transactions
    ```sh
