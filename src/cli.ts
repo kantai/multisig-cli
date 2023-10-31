@@ -111,7 +111,7 @@ export async function subcommand_create_tx(args: string[]): Promise<string[]> {
     outStream.log(`Unsigned multisig transaction(s)`);
     outStream.log(`--------------------------------`);
   }
-  outStream.dir(txsEncoded, { depth: null, colors: outIsTerm });
+  outStream.log(JSON.stringify(txsEncoded, null, 2));
 
   // return value for unit testing
   return txsEncoded;
@@ -183,7 +183,7 @@ export async function subcommand_sign(args: string[], transport: object): Promis
   }
 
   const txsEncodedOut = txsOut.map(lib.txEncode);
-  outStream.dir(txsEncodedOut, { depth: null, colors: outIsTerm });
+  outStream.log(JSON.stringify(txsEncodedOut, null, 2));
 
   // return value for unit testing
   return txsEncodedOut;
@@ -225,16 +225,14 @@ export async function subcommand_broadcast(args: string[]): Promise<StxTx.TxBroa
   // Output results
   // Show extra headers and colors if we are not outputting to pipe or file
   let outStream = console;
-  let outIsTerm = process.stdout.isTTY;
 
   if (idxOutFile >= 0) {
     const fileName = args[idxOutFile + 1];
     const stdout = fs.createWriteStream(fileName);
     const stderr = fs.createWriteStream(`${fileName}.err`);
     outStream = new Console({ stdout, stderr });
-    outIsTerm = false;
   }
-  outStream.dir(results, { depth: null, colors: outIsTerm });
+  outStream.log(JSON.stringify(results, null, 2));
 
   // return value for unit testing
   return results;
