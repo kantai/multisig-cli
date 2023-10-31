@@ -80,18 +80,17 @@ You will need to copy/paste this between steps to manage application state.
 
 1. Create the transactions from a CSV file and save outputs to file
    ```sh
-    npm start -- create_tx --csv-inputs $CSV_INPUTS_FILE > transactions.json
+    npm start -- create_tx --csv-inputs $CSV_INPUTS_FILE --out-file transactions.json
    ```
 
 2. Sign the transactions and save outputs to file
    ```sh
-   npm start -- sign --json-txs transactions.json --csv-keys $CSV_KEYS_FILE
+   npm start -- sign --json-txs transactions.json --csv-keys $CSV_KEYS_FILE --out-file signed_transactions.json
    ```
-   Copy and paste the output into `signed_transactions.json` for the next step
 
 3. Broadcast transactions
    ```sh
-   npm start -- broadcast --json-txs signed_transactions.json > broadcast_results.json
+   npm start -- broadcast --json-txs signed_transactions.json --out-file broadcast_results.json
    ```
 
 ## Using Docker

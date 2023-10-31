@@ -1,7 +1,9 @@
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
 import StxApp from "@zondax/ledger-blockstack";
 import readline from "readline";
+import { Console } from 'node:console'; 
 
+import * as fs from 'node:fs'; 
 import * as StxTx from "@stacks/transactions";
 import * as lib from "./lib";
 
@@ -63,11 +65,14 @@ export async function subcommand_make_multi(args: string[], transport: object): 
 }
 
 export async function subcommand_create_tx(args: string[]): Promise<string[]> {
-  let inputs: lib.MultisigTxInput[];
-
-  // Get inputs
+  // Process args
   const idxJsonInputs = args.indexOf('--json-inputs');
   const idxCsvInputs = args.indexOf('--csv-inputs');
+  const idxOutFile = args.indexOf('--out-file');
+
+  // Get inputs
+  let inputs: lib.MultisigTxInput[];
+
   if (idxJsonInputs >= 0) {
     inputs = await lib.makeTxInputsFromFile(args[idxJsonInputs + 1]);
   } else if (idxCsvInputs >= 0) {
@@ -91,25 +96,38 @@ export async function subcommand_create_tx(args: string[]): Promise<string[]> {
   const txs = await lib.makeStxTokenTransfers(inputs);
   const txsEncoded = txs.map(lib.txEncode);
 
-  // Output transactions. Show extra headers and colors if we are not outputting to pipe
-  const colors = process.stdout.isTTY;
-  if (colors) {
-    console.log(`Unsigned multisig transaction(s)`);
-    console.log(`--------------------------------`);
+  // Output transactions. Show extra headers and colors if we are not outputting to pipe or file
+  let outStream = console;
+  let outIsTerm = process.stdout.isTTY;
+
+  if (idxOutFile >= 0) {
+    const fileName = args[idxOutFile + 1];
+    const stdout = fs.createWriteStream(fileName);
+    const stderr = fs.createWriteStream(`${fileName}.err`);
+    outStream = new Console({ stdout, stderr });
+    outIsTerm = false;
   }
-  console.dir(txsEncoded, { depth: null, colors });
+  if (outIsTerm) {
+    outStream.log(`Unsigned multisig transaction(s)`);
+    outStream.log(`--------------------------------`);
+  }
+  outStream.dir(txsEncoded, { depth: null, colors: outIsTerm });
 
   // return value for unit testing
   return txsEncoded;
 }
 
 export async function subcommand_sign(args: string[], transport: object): Promise<string[]> {
+  // Process args
+  const idxJsonTxs = args.indexOf('--json-txs');
+  const idxCsvKeys = args.indexOf('--csv-keys');
+  const idxOutFile = args.indexOf('--out-file');
+
   const app = new StxApp(transport);
 
+  // Get transactions
   let txsEncodedIn: string[];
 
-  // Get transactions
-  const idxJsonTxs = args.indexOf('--json-txs');
   if (idxJsonTxs >= 0) {
     txsEncodedIn = await lib.encodedTxsFromFile(args[idxJsonTxs + 1]);
   } else {
@@ -123,7 +141,6 @@ export async function subcommand_sign(args: string[], transport: object): Promis
 
   // Read key/path mappings if given
   let keyPaths = new Map<string, string>;
-  const idxCsvKeys = args.indexOf('--csv-keys');
   if (idxJsonTxs >= 0) {
     keyPaths = await lib.makeKeyPathMapFromCSVFile(args[idxCsvKeys + 1]);
   }
@@ -144,16 +161,29 @@ export async function subcommand_sign(args: string[], transport: object): Promis
   }
 
   // Encode and output transactions
-  // Show extra headers and colors if we are not outputting to pipe
-  const colors = process.stdout.isTTY;
-  if (colors) {
-    const info = lib.getAuthFieldInfo(txsOut[0]);
-    console.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures)`);
-    console.log(`------------------------------`);
+  // Show extra headers and colors if we are not outputting to pipe or file
+  let outStream = console;
+  let outIsTerm = process.stdout.isTTY;
+
+  if (idxOutFile >= 0) {
+    const fileName = args[idxOutFile + 1];
+    const stdout = fs.createWriteStream(fileName);
+    const stderr = fs.createWriteStream(`${fileName}.err`);
+    outStream = new Console({ stdout, stderr });
+    outIsTerm = false;
+  }
+  if (outIsTerm) {
+    if (txsOut.length === 1) {
+      const info = lib.getAuthFieldInfo(txsOut[0]);
+      outStream.log(`Signed payload (${info.signatures}/${info.signaturesRequired} required signatures)`);
+    } else {
+      outStream.log(`Signed payloads`);
+    }
+    outStream.log(`------------------------------`);
   }
 
   const txsEncodedOut = txsOut.map(lib.txEncode);
-  console.dir(txsEncodedOut, { depth: null, colors });
+  outStream.dir(txsEncodedOut, { depth: null, colors: outIsTerm });
 
   // return value for unit testing
   return txsEncodedOut;
@@ -162,6 +192,7 @@ export async function subcommand_sign(args: string[], transport: object): Promis
 export async function subcommand_broadcast(args: string[]): Promise<StxTx.TxBroadcastResult[]> {
   // Parse args
   const idxJsonTxs = args.indexOf('--json-txs');
+  const idxOutFile = args.indexOf('--out-file');
   const dryRun = args.includes('--dry-run');
 
   // Get transactions
@@ -192,9 +223,18 @@ export async function subcommand_broadcast(args: string[]): Promise<StxTx.TxBroa
   );
 
   // Output results
-  // Show extra headers and colors if we are not outputting to pipe
-  const colors = process.stdout.isTTY;
-  console.dir(results, { depth: null, colors });
+  // Show extra headers and colors if we are not outputting to pipe or file
+  let outStream = console;
+  let outIsTerm = process.stdout.isTTY;
+
+  if (idxOutFile >= 0) {
+    const fileName = args[idxOutFile + 1];
+    const stdout = fs.createWriteStream(fileName);
+    const stderr = fs.createWriteStream(`${fileName}.err`);
+    outStream = new Console({ stdout, stderr });
+    outIsTerm = false;
+  }
+  outStream.dir(results, { depth: null, colors: outIsTerm });
 
   // return value for unit testing
   return results;
