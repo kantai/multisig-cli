@@ -34,6 +34,7 @@ npm start -- <subcommand> [args]
 | `--csv-inputs <path>` | `create_tx`                       | Read transaction inputs from a CSV file               |
 | `--json-txs <path>`   | `sign`, `broadcast`               | Allow bulk operations by reading JSON array from file |
 | `--csv-keys <path>`   | `sign`                            | Sign using pubkeys/paths from a CSV file              |
+| `--out-file <path>`   | `create_tx`, `sign`, `broadcast`  | Output JSON directly to file                          |
 
 ## Examples
 
