@@ -1,8 +1,17 @@
-IMAGE := "hirosystems/multisig-cli"
-TAG   := "latest"
+IMAGE     := "hirosystems/multisig-cli"
+TAG       := "latest"
+PLATFORMS := "linux/amd64,linux/arm64/v8"
 
 build:
 	DOCKER_BUILDKIT=1 docker build -t {{IMAGE}}:{{TAG}} .
+
+buildx-setup:
+	docker buildx create --name cross-builder --platform {{PLATFORMS}}
+	docker buildx use cross-builder
+	docker buildx inspect --bootstrap
+
+buildx-push:
+	docker buildx build --push --platform {{PLATFORMS}} -t {{IMAGE}}:{{TAG}} .
 
 run *args:
 	#!/usr/bin/env bash

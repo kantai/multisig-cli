@@ -80,7 +80,7 @@ You will need to copy/paste this between steps to manage application state.
 
 1. Create the transactions from a CSV file and save outputs to file
    ```sh
-    npm start -- create_tx --csv-inputs $CSV_INPUTS_FILE --out-file transactions.json
+   npm start -- create_tx --csv-inputs $CSV_INPUTS_FILE --out-file transactions.json
    ```
 
 2. Sign the transactions and save outputs to file
@@ -97,13 +97,13 @@ You will need to copy/paste this between steps to manage application state.
 
 You will need Docker and `just` (can be installed by `cargo install just`)
 
-## Building the Image
+### Building the Image
 
 ```sh
 just build
 ```
 
-## Running the Image
+### Running the Image
 
 Run the same way you would run normally, but replace the `npm start --` prefix with:
 

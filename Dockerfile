@@ -9,6 +9,7 @@ RUN /bin/bash <<EOF
 	apt-get install -y --no-install-recommends \
 		build-essential \
 		gosu \
+		libudev-dev \
 		libusb-1.0-0-dev
 	npm install -g ts-node
 EOF
