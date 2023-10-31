@@ -40,7 +40,12 @@ export function txEncode(tx: StacksTransaction): string {
 
 // Import `StacksTransaction` from base64-encoded string
 export function txDecode(b64: string): StacksTransaction {
-  return StxTx.deserializeTransaction(Buffer.from(b64, 'base64'));
+  const tx = StxTx.deserializeTransaction(Buffer.from(b64, 'base64'));
+  // This is a workaround because tx deserializes with extra null bytes
+  // See https://github.com/hirosystems/stacks.js/issues/1575
+  //(tx.payload as any).memo?.content?.replace(/^[\0]*/g, ''); // Trim leading null bytes
+  //console.log(`content.length=${(tx.payload as any).memo.content.length}`);
+  return tx;
 }
 
 // Export an object as base64-encoded string

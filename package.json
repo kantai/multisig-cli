@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "@ledgerhq/hw-transport-node-hid": "^6.27.1",
-    "@ledgerhq/hw-transport-node-speculos": "^6.27.1",
+    "@ledgerhq/hw-transport-node-hid": "^6.27.21",
+    "@ledgerhq/hw-transport-node-speculos": "^6.27.19",
     "@stacks/transactions": "^4.3.3",
     "@types/papaparse": "^5.3.10",
     "@zondax/ledger-blockstack": "^0.22.5",
