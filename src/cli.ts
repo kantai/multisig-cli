@@ -153,6 +153,7 @@ export async function subcommand_sign(args: string[], transport: object): Promis
       if (sigs >= info.signaturesRequired) break;
       const hdPath = keyPaths.get(pk) ?? await readInput(`HD derivation path for ${pk} (empty to skip for this key)`);
       if (!hdPath) continue;
+      console.log(`Expecting ${hdPath}=>${pk}...`);
       console.log("    *** Please check and approve signing on Ledger ***");
       tx = await lib.ledgerSignMultisigTx(app, hdPath, tx);
       sigs += 1;
