@@ -176,10 +176,15 @@ export function makeKeyPathMapFromCSVText(text: string): Map<string, string> {
     throw Error('Data is not an array');
   }
 
+  interface Line {
+    key: string,
+    path: string,
+  }
+
   const keyPaths = new Map<string, string>();
   for (const line of data) {
-    const l = line as any;
-    keyPaths.set(l?.key, l?.path);
+    const l = line as Line;
+    keyPaths.set(l.key, l.path);
   }
   return keyPaths;
 }
