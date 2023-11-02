@@ -84,16 +84,24 @@ export async function getPubKeyMultisigStandardIndex(app: StxApp, index: number)
   return { pubkey: await getPubKey(app, path), path };
 }
 
-export async function generateMultiSigAddr(app: StxApp) {
-  const pk0 = await getPubKeyMultisigStandardIndex(app, 0);
-  const pk1 = await getPubKeyMultisigStandardIndex(app, 1);
-  const pk2 = await getPubKeyMultisigStandardIndex(app, 2);
+export async function generateMultiSigAddr(app: StxApp, signers: number, requiredSignatures: number) {
+  // Get pubkey/path pairs from device
+  const keypaths = [];
+  for (let i = 0; i < signers; i++) {
+    const kp = await getPubKeyMultisigStandardIndex(app, i);
+    keypaths.push(kp);
+  }
 
-  const pubkeys = [pk0, pk1, pk2].sort((a, b) => a.pubkey.localeCompare(b.pubkey));
-  console.log(`Making a 2 - of - ${pubkeys.length} multisig address...`);
-  console.log(`Pubkeys: ${pubkeys[0].pubkey}, ${pubkeys[1].pubkey}, ${pubkeys[2].pubkey}`);
-  console.log(`Paths: ${pubkeys[0].path}, ${pubkeys[1].path}, ${pubkeys[2].path}`);
-  return makeMultiSigAddr([pubkeys[0].pubkey, pubkeys[1].pubkey, pubkeys[2].pubkey], 2);
+  // Sort by pubkey
+  keypaths.sort((a, b) => a.pubkey.localeCompare(b.pubkey));
+  const pubkeys = keypaths.map(kp => kp.pubkey);
+  const paths = keypaths.map(kp => kp.path);
+
+  console.log(`Making a ${requiredSignatures}-of-${pubkeys.length} multisig address...`);
+  console.log(`Pubkeys: ${pubkeys.join(', ')}`);
+  console.log(`Paths: ${paths.join(', ')}`);
+
+  return makeMultiSigAddr(pubkeys, requiredSignatures);
 }
 
 export function makeMultiSigAddr(pubkeys: string[], required: number): string {

@@ -57,7 +57,9 @@ export async function subcommand_decode(): Promise<StxTx.StacksTransaction> {
 
 export async function subcommand_make_multi(args: string[], transport: object): Promise<string> {
   const app = new StxApp(transport);
-  const addr = await lib.generateMultiSigAddr(app);
+  const signers = parseInt(await readInput("Potential signers (number)"));
+  const requiredSignatures = parseInt(await readInput("Required signers (number)"));
+  const addr = await lib.generateMultiSigAddr(app, signers, requiredSignatures);
   console.log(`Addr: ${addr}`);
 
   // return value for unit testing
