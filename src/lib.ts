@@ -97,7 +97,7 @@ export async function generateMultiSigAddr(app: StxApp, signers: number, require
   const pubkeys = keypaths.map(kp => kp.pubkey);
   const paths = keypaths.map(kp => kp.path);
 
-  console.log(`Making a ${requiredSignatures}-of-${pubkeys.length} multisig address...`);
+  console.log(`Making a ${requiredSignatures}-of-${keypaths.length} multisig address...`);
   console.log(`Pubkeys: ${pubkeys.join(', ')}`);
   console.log(`Paths: ${paths.join(', ')}`);
 
@@ -172,7 +172,7 @@ export function makeKeyPathMapFromCSVText(text: string): Map<string, string> {
   const { data, errors } = Papa.parse(text, {
     delimiter: ',',
     header: true,
-    skipEmptyLines: false
+    skipEmptyLines: true
   });
 
   if (errors.length) {
@@ -208,7 +208,7 @@ export function makeTxInputsFromCSVText(text: string): MultisigTxInput[] {
   const { data, errors } = Papa.parse(text, {
     delimiter: ',',
     header: true,
-    skipEmptyLines: false
+    skipEmptyLines: true
   });
 
   if (errors.length) {
