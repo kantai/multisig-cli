@@ -1,9 +1,9 @@
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
 import StxApp from "@zondax/ledger-blockstack";
 import readline from "readline";
-import { Console } from 'node:console'; 
+import { Console } from 'node:console';
 
-import * as fs from 'node:fs'; 
+import * as fs from 'node:fs';
 import * as StxTx from "@stacks/transactions";
 import * as lib from "./lib";
 
@@ -27,12 +27,17 @@ async function getTransport() {
   return await TransportNodeHid.create();
 }
 
+async function getStxApp(transport: object): Promise<StxApp> {
+  console.log("    *** Please make sure your Ledger is connected, unlocked, and the Stacks App is open ***");
+  return await new StxApp(transport);
+}
+
 //=================
 // Subcommands
 //=================
 
 export async function subcommand_get_pub(args: string[], transport: object): Promise<string> {
-  const app = new StxApp(transport);
+  const app = await getStxApp(transport);
   const path = args[0];
   if (!path) {
     throw new Error("Must supply path as second argument");
@@ -56,7 +61,7 @@ export async function subcommand_decode(): Promise<StxTx.StacksTransaction> {
 }
 
 export async function subcommand_make_multi(args: string[], transport: object): Promise<string> {
-  const app = new StxApp(transport);
+  const app = await getStxApp(transport);
   const signers = parseInt(await readInput("Potential signers (number)"));
   const requiredSignatures = parseInt(await readInput("Required signers (number)"));
   const addr = await lib.generateMultiSigAddr(app, signers, requiredSignatures);
@@ -125,7 +130,7 @@ export async function subcommand_sign(args: string[], transport: object): Promis
   const idxCsvKeys = args.indexOf('--csv-keys');
   const idxOutFile = args.indexOf('--out-file');
 
-  const app = new StxApp(transport);
+  const app = await getStxApp(transport);
 
   // Get transactions
   let txsEncodedIn: string[];
