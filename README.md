@@ -23,6 +23,7 @@ npm start -- <subcommand> [args]
 | ---------------- | -------------------------------------------------------------- |
 | `get_pub <path>` | Get public key from Ledger                                     |
 | `make_multi`     | Make multisig address from pubkeys                             |
+| `check_multi`    | Check multisig addresses derived from pubkeys                  |
 | `create_tx`      | Create unsigned multisig transaction                           |
 | `sign`           | Sign multisig transaction with Ledger                          |
 | `decode`         | Decode and print Stacks base64-encoded transaction             |

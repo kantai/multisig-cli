@@ -104,13 +104,18 @@ export async function generateMultiSigAddr(app: StxApp, signers: number, require
   return makeMultiSigAddr(pubkeys, requiredSignatures);
 }
 
-export function makeMultiSigAddr(pubkeys: string[], required: number): string {
+export function makeMultiSigAddrRaw(pubkeys: string[], required: number): string {
   const authorizedPKs = pubkeys.slice().map((k) => Buffer.from(k, 'hex'));
   const redeem = btc.payments.p2ms({ m: required, pubkeys: authorizedPKs });
   const btcAddr = btc.payments.p2sh({ redeem }).address;
   if (!btcAddr) {
     throw Error(`Failed to construct BTC address from pubkeys`);
   }
+  return btcAddr;
+}
+
+export function makeMultiSigAddr(pubkeys: string[], required: number): string {
+  const btcAddr = makeMultiSigAddrRaw(pubkeys, required);
   const c32Addr = C32.b58ToC32(btcAddr);
   return c32Addr;
 }
@@ -126,7 +131,7 @@ export function checkAddressPubKeyMatch(pubkeys: string[], required: number, add
   }
   const c32Addr1 = C32.b58ToC32(btcAddr);
   if (c32Addr1 === address) {
-    return authorizedPKs.map((k) => k.toString('hex'));
+    return authorizedPKs.map(k => k.toString('hex'));
   }
 
   // try in order given
@@ -138,7 +143,7 @@ export function checkAddressPubKeyMatch(pubkeys: string[], required: number, add
   }
   const c32Addr2 = C32.b58ToC32(btcAddr);
   if (c32Addr2 === address) {
-    return authorizedPKs.map((k) => k.toString('hex'));
+    return authorizedPKs.map(k => k.toString('hex'));
   }
 
   throw `Public keys did not match expected address. Expected ${address}, but pubkeys correspond to ${c32Addr1} or ${c32Addr2}`;
@@ -491,7 +496,7 @@ export async function ledgerSignTx(app: StxApp, path: string, partialFields: Tra
 
   const outFields = partialFields.slice();
   const pubkeys = partialFields
-    .map((x) => {
+    .map(x => {
       console.log(x);
       if (x.contents.type === StxTx.StacksMessageType.PublicKey) {
         return x.contents.data.toString('hex');

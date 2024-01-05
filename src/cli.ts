@@ -71,6 +71,27 @@ export async function subcommand_make_multi(args: string[], transport: object): 
   return addr;
 }
 
+export async function subcommand_check_multi(): Promise<string> {
+  const publicKeys = (await readInput("From public keys (comma separate)")).split(',').map(x => x.trim());
+  const requiredSignatures = parseInt(await readInput("Required signers (number)"));
+
+  console.log(`Addresses in order provided:`);
+  let raw = await lib.makeMultiSigAddrRaw(publicKeys, requiredSignatures);
+  console.log(`  Raw: ${raw}`);
+  let c32 = await lib.makeMultiSigAddr(publicKeys, requiredSignatures);
+  console.log(`  C32: ${c32}`);
+
+  publicKeys.sort();
+  console.log(`Addresses in sorted order:`);
+  raw = await lib.makeMultiSigAddrRaw(publicKeys, requiredSignatures);
+  console.log(`  Raw: ${raw}`);
+  c32 = await lib.makeMultiSigAddr(publicKeys, requiredSignatures);
+  console.log(`  C32: ${c32}`);
+
+  // return value for unit testing
+  return c32;
+}
+
 export async function subcommand_create_tx(args: string[]): Promise<string[]> {
   // Process args
   const idxJsonInputs = args.indexOf('--json-inputs');
@@ -270,6 +291,9 @@ export async function main(args: string[]) {
   case 'make_multi':
     transport = await getTransport();
     await subcommand_make_multi(args, transport);
+    break;
+  case 'check_multi':
+    await subcommand_check_multi();
     break;
   case 'create_tx':
     await subcommand_create_tx(args);
